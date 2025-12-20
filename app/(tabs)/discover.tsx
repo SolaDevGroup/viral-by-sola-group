@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Dimensions, Image, FlatList } from "react-native";
 import { DISCOVER_CATEGORIES, DISCOVER_VIDEOS, SEARCH_ACCOUNTS, LIVE_STREAMS } from "@/constants/mockData";
-import { X, Search, Eye, Sliders, UserPlus, MessageSquare, Plus, BadgeCheck, ShieldCheck } from "lucide-react-native";
+import { X, Search, Eye, Sliders, MessageSquare, Plus, BadgeCheck, ShieldCheck, UserCheck } from "lucide-react-native";
 import { Stack, router, Href } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
 import Colors from "@/constants/colors";
@@ -17,7 +17,7 @@ const SMALL_CARD_HEIGHT = (ROW_HEIGHT - CARD_GAP) / 2;
 
 type CardType = 'big' | 'small';
 type CardPosition = 0 | 1 | 2;
-type SearchTab = 'Accounts' | 'Reels' | 'Live';
+type SearchTab = 'Accounts' | 'Reels' | 'Live' | null;
 type AccountFilter = 'all' | 'pro' | 'verified';
 
 interface GridItem {
@@ -42,10 +42,12 @@ export default function DiscoverScreen() {
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
-  const [activeSearchTab, setActiveSearchTab] = useState<SearchTab>('Accounts');
+  const [activeSearchTab, setActiveSearchTab] = useState<SearchTab>(null);
   const [accountFilter, setAccountFilter] = useState<AccountFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [followingState, setFollowingState] = useState<Record<string, boolean>>({});
+
+  const hasSearchText = searchQuery.length > 0;
 
   const filteredVideos = useMemo(() => {
     let filtered = DISCOVER_VIDEOS;
@@ -174,9 +176,23 @@ export default function DiscoverScreen() {
   const handleClearSearch = () => {
     setSearchQuery("");
     setIsSearchFocused(false);
-    setActiveSearchTab('Accounts');
+    setActiveSearchTab(null);
     setAccountFilter('all');
     setSelectedCategory(null);
+  };
+
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    if (!hasSearchText) {
+      setActiveSearchTab('Accounts');
+    }
+  };
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (text.length > 0 && activeSearchTab === 'Accounts' && !hasSearchText) {
+      setActiveSearchTab(null);
+    }
   };
 
   const renderBigCard = (item: GridItem, isLive: boolean = false) => (
@@ -250,7 +266,6 @@ export default function DiscoverScreen() {
 
   const renderAccountItem = ({ item }: { item: SearchAccount }) => {
     const isFollowing = followingState[item.id] ?? item.isFollowing;
-    const showFullActions = item.isPro || item.isVerified;
     
     return (
       <View style={styles.accountItem}>
@@ -283,15 +298,18 @@ export default function DiscoverScreen() {
           </View>
         </TouchableOpacity>
         <View style={styles.accountActions}>
-          {showFullActions ? (
+          {isFollowing ? (
             <>
               <TouchableOpacity 
-                style={[styles.followButton, isFollowing && styles.followingButton]}
+                style={styles.followingButtonGreen}
                 onPress={() => handleFollowToggle(item.id, isFollowing)}
               >
-                <UserPlus size={20} color="#FFFFFF" strokeWidth={2} />
+                <UserCheck size={20} color="#FFFFFF" strokeWidth={2} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.messageButton}>
+              <TouchableOpacity 
+                style={styles.messageButton}
+                onPress={() => router.push(`/conversation/${item.id}` as Href)}
+              >
                 <MessageSquare size={20} color="#121212" strokeWidth={2} fill="#121212" />
               </TouchableOpacity>
             </>
@@ -308,33 +326,20 @@ export default function DiscoverScreen() {
     );
   };
 
-  const renderSearchTabs = () => (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.searchTabsContainer}
-    >
-      {(['Accounts', 'Reels', 'Live'] as SearchTab[]).map((tab) => (
-        <TouchableOpacity
-          key={tab}
-          style={[
-            styles.searchTab,
-            activeSearchTab === tab && styles.searchTabActive
-          ]}
-          onPress={() => {
-            setActiveSearchTab(tab);
-            setSelectedCategory(null);
-          }}
+  const renderSearchTabs = () => {
+    if (!hasSearchText) {
+      return (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.searchTabsContainer}
         >
-          <Text style={[
-            styles.searchTabText,
-            { color: activeSearchTab === tab ? '#FFFFFF' : theme.text }
-          ]}>{tab}</Text>
-        </TouchableOpacity>
-      ))}
-      
-      {activeSearchTab === 'Accounts' && (
-        <>
+          <TouchableOpacity
+            style={[styles.searchTab, styles.searchTabActive]}
+          >
+            <Text style={[styles.searchTabText, { color: '#FFFFFF' }]}>Accounts</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -363,54 +368,101 @@ export default function DiscoverScreen() {
               { color: accountFilter === 'verified' ? '#FFFFFF' : theme.text }
             ]}>Verified</Text>
           </TouchableOpacity>
-        </>
-      )}
-      
-      {(activeSearchTab === 'Reels' || activeSearchTab === 'Live') && (
-        <>
+        </ScrollView>
+      );
+    }
+
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.searchTabsContainer}
+      >
+        {(['Accounts', 'Reels', 'Live'] as const).map((tab) => (
           <TouchableOpacity
+            key={tab}
             style={[
-              styles.categoryChip,
-              { backgroundColor: theme.inputBackground },
-              !selectedCategory && styles.categoryChipActive
+              styles.searchTab,
+              activeSearchTab === tab && styles.searchTabActive
             ]}
-            onPress={() => setSelectedCategory(null)}
+            onPress={() => {
+              setActiveSearchTab(tab);
+              setSelectedCategory(null);
+            }}
           >
             <Text style={[
-              styles.categoryText,
-              { color: !selectedCategory ? '#121212' : theme.text }
-            ]}>Reels</Text>
+              styles.searchTabText,
+              { color: activeSearchTab === tab ? '#FFFFFF' : theme.text }
+            ]}>{tab}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.categoryChip,
-              { backgroundColor: theme.inputBackground }
-            ]}
-          >
-            <Text style={[styles.categoryText, { color: theme.text }]}>#tag</Text>
-          </TouchableOpacity>
-          {DISCOVER_CATEGORIES.map((category) => (
+        ))}
+        
+        {activeSearchTab === 'Accounts' && (
+          <>
             <TouchableOpacity
-              key={category.id}
+              style={[
+                styles.filterTab,
+                { backgroundColor: theme.inputBackground },
+                accountFilter === 'pro' && styles.filterTabActive
+              ]}
+              onPress={() => setAccountFilter(accountFilter === 'pro' ? 'all' : 'pro')}
+            >
+              <BadgeCheck size={18} color={accountFilter === 'pro' ? '#FFFFFF' : '#121212'} fill={accountFilter === 'pro' ? '#FFFFFF' : '#121212'} strokeWidth={0} />
+              <Text style={[
+                styles.filterTabText,
+                { color: accountFilter === 'pro' ? '#FFFFFF' : theme.text }
+              ]}>Pro</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                { backgroundColor: theme.inputBackground },
+                accountFilter === 'verified' && styles.filterTabActive
+              ]}
+              onPress={() => setAccountFilter(accountFilter === 'verified' ? 'all' : 'verified')}
+            >
+              <ShieldCheck size={18} color={accountFilter === 'verified' ? '#FFFFFF' : '#121212'} strokeWidth={2} />
+              <Text style={[
+                styles.filterTabText,
+                { color: accountFilter === 'verified' ? '#FFFFFF' : theme.text }
+              ]}>Verified</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {(activeSearchTab === 'Reels' || activeSearchTab === 'Live') && (
+          <>
+            <TouchableOpacity
               style={[
                 styles.categoryChip,
-                { backgroundColor: theme.inputBackground },
-                selectedCategory === category.name && styles.categoryChipActive
+                { backgroundColor: theme.inputBackground }
               ]}
-              onPress={() => setSelectedCategory(
-                selectedCategory === category.name ? null : category.name
-              )}
             >
-              <Text style={[
-                styles.categoryText,
-                { color: selectedCategory === category.name ? '#121212' : theme.text }
-              ]}>{category.name}</Text>
+              <Text style={[styles.categoryText, { color: theme.text }]}>#midterms</Text>
             </TouchableOpacity>
-          ))}
-        </>
-      )}
-    </ScrollView>
-  );
+            {DISCOVER_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryChip,
+                  { backgroundColor: theme.inputBackground },
+                  selectedCategory === category.name && styles.categoryChipActive
+                ]}
+                onPress={() => setSelectedCategory(
+                  selectedCategory === category.name ? null : category.name
+                )}
+              >
+                <Text style={[
+                  styles.categoryText,
+                  { color: selectedCategory === category.name ? '#121212' : theme.text }
+                ]}>{category.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+      </ScrollView>
+    );
+  };
 
   const renderContent = () => {
     if (!isSearchFocused) {
@@ -424,6 +476,29 @@ export default function DiscoverScreen() {
             {gridRows.map((row, index) => renderRow(row, index))}
           </View>
         </ScrollView>
+      );
+    }
+
+    if (!hasSearchText) {
+      return (
+        <FlatList
+          data={filteredAccounts}
+          renderItem={renderAccountItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.accountsList}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.border }]} />}
+        />
+      );
+    }
+
+    if (activeSearchTab === null) {
+      return (
+        <View style={styles.selectTabPrompt}>
+          <Text style={[styles.selectTabText, { color: theme.textSecondary }]}>
+            Select a tab to see results
+          </Text>
+        </View>
       );
     }
 
@@ -481,11 +556,11 @@ export default function DiscoverScreen() {
             <Search size={24} color={theme.textSecondary} strokeWidth={2} />
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
-              placeholder={isSearchFocused ? "Search..." : "Search Accounts, Reels, Live..."}
+              placeholder={isSearchFocused ? (hasSearchText ? "Search..." : "Elon X...") : "Search Accounts, Reels, Live..."}
               placeholderTextColor={theme.textTertiary}
               value={searchQuery}
-              onChangeText={setSearchQuery}
-              onFocus={() => setIsSearchFocused(true)}
+              onChangeText={handleSearchChange}
+              onFocus={handleSearchFocus}
             />
             {(searchQuery.length > 0 || isSearchFocused) && (
               <TouchableOpacity onPress={handleClearSearch}>
@@ -493,7 +568,7 @@ export default function DiscoverScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {isSearchFocused && activeSearchTab === 'Accounts' && (
+          {isSearchFocused && (activeSearchTab === 'Accounts' || !hasSearchText) && (
             <TouchableOpacity style={[styles.filterButton, { borderColor: theme.border }]}>
               <Sliders size={20} color={theme.text} strokeWidth={2} />
             </TouchableOpacity>
@@ -756,16 +831,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  followButton: {
+  followingButtonGreen: {
     width: 40,
     height: 40,
     borderRadius: 100,
     backgroundColor: '#014D3A',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  followingButton: {
-    backgroundColor: 'rgba(1, 77, 58, 0.5)',
   },
   messageButton: {
     width: 40,
@@ -786,5 +858,16 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: 'rgba(18, 18, 18, 0.04)',
+  },
+  selectTabPrompt: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 100,
+  },
+  selectTabText: {
+    fontSize: 16,
+    fontFamily: "Poppins-Medium",
+    fontWeight: '500' as const,
   },
 });
