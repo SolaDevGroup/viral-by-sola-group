@@ -67,15 +67,13 @@ export default function ProductDetailScreen() {
   }, []);
 
   const handleBuyNow = useCallback(() => {
-    Alert.alert(
-      "Complete Purchase",
-      `Proceed to checkout for ${product?.name}?\n\nTotal: $${product?.price}`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Buy Now", onPress: () => Alert.alert("Success", "Order placed successfully!") }
-      ]
-    );
-  }, [product]);
+    if (product && seller) {
+      router.push({
+        pathname: '/checkout',
+        params: { productId: product.id, sellerId: seller.id }
+      });
+    }
+  }, [product, seller, router]);
 
   const handleMessageSeller = useCallback(() => {
     if (seller) {
