@@ -179,9 +179,12 @@ export default function ShopScreen() {
     })).filter(user => user.products.length > 0);
   }, [selectedCategory]);
 
-  const handleProductPress = useCallback((product: Product) => {
-    console.log('Product pressed:', product.id);
-  }, []);
+  const handleProductPress = useCallback((product: Product, sellerId: string) => {
+    router.push({
+      pathname: '/product/[productId]',
+      params: { productId: product.id, sellerId }
+    });
+  }, [router]);
 
   const handleFollow = useCallback((userId: string) => {
     console.log('Follow user:', userId);
@@ -247,7 +250,7 @@ export default function ShopScreen() {
             products={user.products}
             onFollow={() => handleFollow(user.id)}
             onMessage={() => handleMessage(user.id)}
-            onProductPress={handleProductPress}
+            onProductPress={(product) => handleProductPress(product, user.id)}
           />
         ))}
 

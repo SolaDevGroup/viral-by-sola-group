@@ -45,6 +45,7 @@ function RootLayoutNav() {
       <Stack.Screen name="trim-video" />
       <Stack.Screen name="post-video" />
       <Stack.Screen name="story-viewer" options={{ animation: 'fade' }} />
+      <Stack.Screen name="product/[productId]" />
     </Stack>
   );
 }
