@@ -1,141 +1,265 @@
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image } from "react-native";
-import { Search, ShoppingBag, Tag, Sparkles, ChevronRight } from "lucide-react-native";
-import { useState } from "react";
-import Colors from "@/constants/colors";
-import { useApp } from "@/contexts/AppContext";
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, TextInput } from "react-native";
+import { Search, X, Eye, Bookmark, UserPlus, MessageSquare, ChevronRight } from "lucide-react-native";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "expo-router";
+import { MOCK_PRO_USERS, MOCK_NON_PRO_USERS, SHOP_CATEGORIES } from "@/constants/mockData";
+import { Product, ProUser } from "@/types";
 
-const CATEGORIES = [
-  { id: '1', name: 'Featured', icon: Sparkles },
-  { id: '2', name: 'Deals', icon: Tag },
-  { id: '3', name: 'New Arrivals', icon: ShoppingBag },
-];
+const VerifiedBadge = () => (
+  <View style={styles.verifiedBadge}>
+    <View style={styles.verifiedInner}>
+      <Text style={styles.verifiedCheck}>✓</Text>
+    </View>
+  </View>
+);
 
-const FEATURED_PRODUCTS = [
-  { id: '1', name: 'Premium Headphones', price: '$299', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', discount: '20% OFF' },
-  { id: '2', name: 'Smart Watch Pro', price: '$449', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', discount: null },
-  { id: '3', name: 'Wireless Earbuds', price: '$149', image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400', discount: '15% OFF' },
-  { id: '4', name: 'Camera Lens Kit', price: '$599', image: 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=400', discount: null },
-];
+const formatViews = (views: number): string => {
+  if (views >= 1000000) {
+    return `${(views / 1000000).toFixed(1)}M views`;
+  }
+  if (views >= 1000) {
+    return `${(views / 1000).toFixed(1)}k`;
+  }
+  return `${views}`;
+};
 
-const TRENDING_SHOPS = [
-  { id: '1', name: 'TechVibe', avatar: 'https://i.pravatar.cc/150?img=1', followers: '12.5K' },
-  { id: '2', name: 'StyleHub', avatar: 'https://i.pravatar.cc/150?img=2', followers: '8.2K' },
-  { id: '3', name: 'GadgetWorld', avatar: 'https://i.pravatar.cc/150?img=3', followers: '15.1K' },
-  { id: '4', name: 'FashionForward', avatar: 'https://i.pravatar.cc/150?img=4', followers: '22.3K' },
-];
+const formatTotalViews = (views: number): string => {
+  if (views >= 1000000) {
+    return `${(views / 1000000).toFixed(1)}M views`;
+  }
+  if (views >= 1000) {
+    return `${(views / 1000).toFixed(1)}k views`;
+  }
+  return `${views} views`;
+};
 
-export default function ShopScreen() {
-  const { isDarkMode, accentColor } = useApp();
-  const theme = isDarkMode ? Colors.dark : Colors.light;
-  const [selectedCategory, setSelectedCategory] = useState('1');
+interface ProductCardProps {
+  product: Product;
+  onPress: () => void;
+  onFavorite: () => void;
+  onBookmark: () => void;
+}
+
+const ProductCard = ({ product, onPress, onFavorite, onBookmark }: ProductCardProps) => {
+  return (
+    <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.productImageContainer}>
+        <Image source={{ uri: product.image }} style={styles.productImage} />
+        <View style={styles.productOverlay}>
+          <View style={styles.productTopRow}>
+            <TouchableOpacity style={styles.iconButton} onPress={onPress}>
+              <Eye size={12} color="#121212" strokeWidth={2} />
+            </TouchableOpacity>
+            <View style={styles.productTopRight}>
+              <TouchableOpacity style={styles.iconButton} onPress={onFavorite}>
+                <View style={[styles.favoriteIcon, product.isFavorited && styles.favoriteIconActive]}>
+                  <Text style={styles.starIcon}>★</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={onBookmark}>
+                <Bookmark 
+                  size={12} 
+                  color={product.isBookmarked ? "#014D3A" : "#121212"} 
+                  fill={product.isBookmarked ? "#014D3A" : "transparent"}
+                  strokeWidth={2} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.viewsPill}>
+            <Eye size={12} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.viewsText}>{formatViews(product.views)}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productPrice}>${product.price}</Text>
+        <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+        <Text style={styles.productBrand}>{product.brand}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+interface ProUserSectionProps {
+  user: ProUser;
+  products: Product[];
+  onFollow: () => void;
+  onMessage: () => void;
+  onProductPress: (product: Product) => void;
+}
+
+const ProUserSection = ({ user, products, onFollow, onMessage, onProductPress }: ProUserSectionProps) => {
+  const router = useRouter();
+
+  const handleUserPress = useCallback(() => {
+    router.push(`/profile/${user.id}`);
+  }, [router, user.id]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Shop</Text>
-          <TouchableOpacity style={[styles.searchButton, { backgroundColor: theme.cardBackground }]}>
-            <Search size={20} color={theme.textSecondary} strokeWidth={2} />
+    <View style={styles.userSection}>
+      <TouchableOpacity style={styles.userHeader} onPress={handleUserPress} activeOpacity={0.7}>
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+        </View>
+        <View style={styles.userInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.displayName}>{user.displayName}</Text>
+            {user.isVerified && <VerifiedBadge />}
+          </View>
+          <View style={styles.statsRow}>
+            <Text style={styles.username}>{user.username}</Text>
+            <View style={styles.dotSeparator} />
+            <Text style={styles.viewCount}>{formatTotalViews(user.totalViews)}</Text>
+          </View>
+        </View>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.followButton} onPress={onFollow}>
+            <UserPlus size={20} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.messageButton} onPress={onMessage}>
+            <MessageSquare size={20} color="#121212" strokeWidth={2} />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </TouchableOpacity>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.productsScroll}
+      >
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onPress={() => onProductPress(product)}
+            onFavorite={() => console.log('Favorite:', product.id)}
+            onBookmark={() => console.log('Bookmark:', product.id)}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+interface NonProUserRowProps {
+  user: typeof MOCK_NON_PRO_USERS[0];
+  onPress: () => void;
+}
+
+const NonProUserRow = ({ user, onPress }: NonProUserRowProps) => {
+  return (
+    <TouchableOpacity style={styles.nonProUserRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.nonProAvatarContainer}>
+        <Image source={{ uri: user.avatar }} style={styles.nonProAvatar} />
+      </View>
+      <View style={styles.nonProUserInfo}>
+        <Text style={styles.nonProDisplayName}>{user.displayName}</Text>
+        <View style={styles.statsRow}>
+          <Text style={styles.username}>{user.username}</Text>
+          <View style={styles.dotSeparator} />
+          <Text style={styles.viewCount}>{formatTotalViews(user.totalViews)}</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.nonProMessageButton} onPress={() => console.log('Message non-pro user')}>
+        <ChevronRight size={20} color="#121212" strokeWidth={2} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+};
+
+export default function ShopScreen() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<typeof SHOP_CATEGORIES[number]>('Clothing');
+
+  const filteredUsers = useMemo(() => {
+    return MOCK_PRO_USERS.map(user => ({
+      ...user,
+      products: user.products.filter(product => product.category === selectedCategory)
+    })).filter(user => user.products.length > 0);
+  }, [selectedCategory]);
+
+  const handleProductPress = useCallback((product: Product) => {
+    console.log('Product pressed:', product.id);
+  }, []);
+
+  const handleFollow = useCallback((userId: string) => {
+    console.log('Follow user:', userId);
+  }, []);
+
+  const handleMessage = useCallback((userId: string) => {
+    router.push(`/conversation/${userId}`);
+  }, [router]);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.searchBar}>
+          <Search size={24} color="rgba(18, 18, 18, 0.64)" strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Dress..."
+            placeholderTextColor="rgba(18, 18, 18, 0.48)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={22} color="rgba(18, 18, 18, 0.48)" strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.categoriesContainer}
+        >
+          {SHOP_CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.categoryButtonActive
+              ]}
+              onPress={() => setSelectedCategory(category)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.categoryText,
+                selectedCategory === category && styles.categoryTextActive
+              ]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.categoriesContainer}>
-          {CATEGORIES.map((category) => {
-            const Icon = category.icon;
-            const isSelected = selectedCategory === category.id;
-            return (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryButton,
-                  { backgroundColor: isSelected ? accentColor : theme.cardBackground }
-                ]}
-                onPress={() => setSelectedCategory(category.id)}
-                activeOpacity={0.7}
-              >
-                <Icon size={18} color={isSelected ? '#FFF' : theme.textSecondary} strokeWidth={2} />
-                <Text style={[
-                  styles.categoryText,
-                  { color: isSelected ? '#FFF' : theme.textSecondary }
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {filteredUsers.map((user) => (
+          <ProUserSection
+            key={user.id}
+            user={user}
+            products={user.products}
+            onFollow={() => handleFollow(user.id)}
+            onMessage={() => handleMessage(user.id)}
+            onProductPress={handleProductPress}
+          />
+        ))}
 
-        <View style={[styles.bannerContainer, { backgroundColor: '#1A3A2E' }]}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerLabel}>SPECIAL OFFER</Text>
-            <Text style={styles.bannerTitle}>Up to 50% Off</Text>
-            <Text style={styles.bannerSubtitle}>On selected items</Text>
-            <TouchableOpacity style={styles.bannerButton}>
-              <Text style={styles.bannerButtonText}>Shop Now</Text>
-              <ChevronRight size={16} color="#1A3A2E" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.bannerImageContainer}>
-            <ShoppingBag size={80} color="rgba(55, 184, 116, 0.3)" strokeWidth={1} />
-          </View>
-        </View>
+        {filteredUsers.length > 0 && <View style={styles.divider} />}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Trending Shops</Text>
-            <TouchableOpacity>
-              <Text style={[styles.seeAllText, { color: accentColor }]}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shopsScroll}>
-            {TRENDING_SHOPS.map((shop) => (
-              <TouchableOpacity key={shop.id} style={styles.shopCard} activeOpacity={0.7}>
-                <Image source={{ uri: shop.avatar }} style={styles.shopAvatar} />
-                <Text style={[styles.shopName, { color: theme.text }]}>{shop.name}</Text>
-                <Text style={[styles.shopFollowers, { color: theme.textTertiary }]}>{shop.followers} followers</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Featured Products</Text>
-            <TouchableOpacity>
-              <Text style={[styles.seeAllText, { color: accentColor }]}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.productsGrid}>
-            {FEATURED_PRODUCTS.map((product) => (
-              <TouchableOpacity 
-                key={product.id} 
-                style={[styles.productCard, { backgroundColor: theme.cardBackground }]}
-                activeOpacity={0.7}
-              >
-                <View style={styles.productImageContainer}>
-                  <Image source={{ uri: product.image }} style={styles.productImage} />
-                  {product.discount && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>{product.discount}</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.productInfo}>
-                  <Text style={[styles.productName, { color: theme.text }]} numberOfLines={1}>
-                    {product.name}
-                  </Text>
-                  <Text style={[styles.productPrice, { color: accentColor }]}>{product.price}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {MOCK_NON_PRO_USERS.map((user) => (
+          <NonProUserRow
+            key={user.id}
+            user={user}
+            onPress={() => router.push(`/profile/${user.id}`)}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -144,25 +268,51 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  safeArea: {},
   header: {
+    paddingTop: 52,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  searchBar: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    borderRadius: 100,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700' as const,
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#121212',
+    letterSpacing: -0.02,
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+  categoriesContainer: {
+    flexDirection: 'row' as const,
+    gap: 4,
+  },
+  categoryButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    borderRadius: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: '#121212',
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#121212',
+  },
+  categoryTextActive: {
+    color: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -170,156 +320,247 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  categoriesContainer: {
-    flexDirection: 'row' as const,
-    paddingHorizontal: 16,
-    gap: 10,
-    marginBottom: 20,
+  userSection: {
+    borderRadius: 12,
+    marginBottom: 1,
   },
-  categoryButton: {
+  userHeader: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 100,
+    padding: 4,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  bannerContainer: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row' as const,
-    overflow: 'hidden' as const,
-    marginBottom: 24,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: '#F0F0F0',
   },
-  bannerContent: {
+  userInfo: {
     flex: 1,
-  },
-  bannerLabel: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: '#37B874',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  bannerTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: '#FFF',
-    marginBottom: 4,
-  },
-  bannerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 16,
-  },
-  bannerButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#12FFAA',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: 'flex-start' as const,
     gap: 4,
   },
-  bannerButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#1A3A2E',
-  },
-  bannerImageContainer: {
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
+  nameRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: 16,
-    marginBottom: 14,
+    gap: 2,
   },
-  sectionTitle: {
-    fontSize: 18,
+  displayName: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#121212',
+    letterSpacing: -0.5,
+    textTransform: 'capitalize' as const,
+  },
+  verifiedBadge: {
+    width: 14,
+    height: 14,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  verifiedInner: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#007BFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  verifiedCheck: {
+    fontSize: 8,
+    color: '#FFFFFF',
     fontWeight: '700' as const,
   },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-  },
-  shopsScroll: {
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  shopCard: {
-    alignItems: 'center' as const,
-    width: 80,
-  },
-  shopAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom: 8,
-  },
-  shopName: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    textAlign: 'center' as const,
-    marginBottom: 2,
-  },
-  shopFollowers: {
-    fontSize: 11,
-    textAlign: 'center' as const,
-  },
-  productsGrid: {
+  statsRow: {
     flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    paddingHorizontal: 12,
-    gap: 12,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  username: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: 'rgba(18, 18, 18, 0.64)',
+    letterSpacing: -0.01,
+  },
+  dotSeparator: {
+    width: 3,
+    height: 3,
+    borderRadius: 100,
+    backgroundColor: 'rgba(18, 18, 18, 0.16)',
+  },
+  viewCount: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: 'rgba(18, 18, 18, 0.64)',
+    letterSpacing: -0.02,
+  },
+  actionButtons: {
+    flexDirection: 'row' as const,
+    gap: 8,
+  },
+  followButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: '#014D3A',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  messageButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: 'rgba(11, 44, 19, 0.04)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  productsScroll: {
+    paddingHorizontal: 8,
+    paddingBottom: 12,
+    gap: 8,
   },
   productCard: {
-    width: '47%',
+    width: 140,
+    gap: 8,
+  },
+  productImageContainer: {
+    width: 140,
+    height: 140,
     borderRadius: 16,
     overflow: 'hidden' as const,
   },
-  productImageContainer: {
-    position: 'relative' as const,
-  },
   productImage: {
     width: '100%',
-    aspectRatio: 1,
+    height: '100%',
   },
-  discountBadge: {
+  productOverlay: {
     position: 'absolute' as const,
-    top: 8,
-    left: 8,
-    backgroundColor: '#FF4757',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 8,
+    justifyContent: 'space-between' as const,
   },
-  discountText: {
+  productTopRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  productTopRight: {
+    flexDirection: 'row' as const,
+    gap: 3,
+  },
+  iconButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  favoriteIcon: {
+    width: 12,
+    height: 12,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  favoriteIconActive: {},
+  starIcon: {
     fontSize: 10,
-    fontWeight: '700' as const,
-    color: '#FFF',
+    color: '#014D3A',
+  },
+  viewsPill: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 87.5,
+  },
+  viewsText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+    letterSpacing: -0.02,
   },
   productInfo: {
-    padding: 12,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    marginBottom: 4,
+    gap: 6,
   },
   productPrice: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#121212',
+    letterSpacing: -0.02,
+  },
+  productName: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#121212',
+    letterSpacing: -0.02,
+    lineHeight: 13,
+  },
+  productBrand: {
+    fontSize: 10,
+    fontWeight: '500' as const,
+    color: 'rgba(18, 18, 18, 0.64)',
+    letterSpacing: -0.02,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    marginVertical: 8,
+  },
+  nonProUserRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  nonProAvatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 100,
+    borderWidth: 2,
+    borderColor: 'rgba(18, 18, 18, 0.64)',
+    padding: 4,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  nonProAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+  },
+  nonProUserInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  nonProDisplayName: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontWeight: '500' as const,
+    color: '#121212',
+    letterSpacing: -0.5,
+    textTransform: 'capitalize' as const,
+  },
+  nonProMessageButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
 });

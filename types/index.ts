@@ -175,3 +175,26 @@ export interface SubscriptionTier {
   interval: 'monthly' | 'yearly';
   benefits: string[];
 }
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  brand: string;
+  views: number;
+  isFavorited: boolean;
+  isBookmarked: boolean;
+  category: 'Clothing' | 'Electronics' | 'Healthcare' | 'Toys' | 'Others';
+}
+
+export interface ProUser {
+  id: string;
+  displayName: string;
+  username: string;
+  avatar: string;
+  isVerified: boolean;
+  isPro: boolean;
+  totalViews: number;
+  products: Product[];
+}

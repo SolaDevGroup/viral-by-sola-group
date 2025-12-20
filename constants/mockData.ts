@@ -1,4 +1,4 @@
-import { User, Video, Story, StoryPost, Conversation, Gift, Ad, Comment, Short, Notification } from '@/types';
+import { User, Video, Story, StoryPost, Conversation, Gift, Ad, Comment, Short, Notification, ProUser } from '@/types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -1248,6 +1248,144 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     text: 'mentioned you in a comment',
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     isRead: true,
+  },
+];
+
+export const SHOP_CATEGORIES = ['Clothing', 'Electronics', 'Healthcare', 'Toys', 'Others'] as const;
+
+export const MOCK_PRO_USERS: ProUser[] = [
+  {
+    id: 'pro1',
+    displayName: 'Xbox US',
+    username: 'xboxus',
+    avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Xbox_one_logo.svg/200px-Xbox_one_logo.svg.png',
+    isVerified: true,
+    isPro: true,
+    totalViews: 149500000,
+    products: [
+      {
+        id: 'p1',
+        name: 'Classic Bullhead Shirt Toys',
+        price: 60,
+        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
+        brand: 'Zara',
+        views: 12500,
+        isFavorited: true,
+        isBookmarked: true,
+        category: 'Clothing',
+      },
+      {
+        id: 'p2',
+        name: 'Premium Gaming Headset',
+        price: 120,
+        image: 'https://images.unsplash.com/photo-1599669454699-248893623440?w=400',
+        brand: 'Xbox',
+        views: 8900,
+        isFavorited: false,
+        isBookmarked: true,
+        category: 'Electronics',
+      },
+      {
+        id: 'p3',
+        name: 'Wireless Controller',
+        price: 75,
+        image: 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=400',
+        brand: 'Xbox',
+        views: 15600,
+        isFavorited: true,
+        isBookmarked: false,
+        category: 'Electronics',
+      },
+    ],
+  },
+  {
+    id: 'pro2',
+    displayName: 'UFC',
+    username: 'therealufc',
+    avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/UFC_Logo.svg/200px-UFC_Logo.svg.png',
+    isVerified: true,
+    isPro: true,
+    totalViews: 85600000,
+    products: [
+      {
+        id: 'p4',
+        name: 'Classic Bullhead Shirt',
+        price: 60,
+        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
+        brand: 'Zara',
+        views: 12500,
+        isFavorited: true,
+        isBookmarked: true,
+        category: 'Clothing',
+      },
+      {
+        id: 'p5',
+        name: 'UFC Training Gloves',
+        price: 89,
+        image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400',
+        brand: 'UFC',
+        views: 9800,
+        isFavorited: false,
+        isBookmarked: false,
+        category: 'Others',
+      },
+      {
+        id: 'p6',
+        name: 'Championship Belt Replica',
+        price: 250,
+        image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400',
+        brand: 'UFC',
+        views: 7200,
+        isFavorited: true,
+        isBookmarked: true,
+        category: 'Others',
+      },
+    ],
+  },
+  {
+    id: 'pro3',
+    displayName: 'Netflix',
+    username: 'netflixoriginal',
+    avatar: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400',
+    isVerified: true,
+    isPro: true,
+    totalViews: 34500000,
+    products: [
+      {
+        id: 'p7',
+        name: 'Stranger Things Hoodie',
+        price: 85,
+        image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400',
+        brand: 'Netflix',
+        views: 18900,
+        isFavorited: true,
+        isBookmarked: false,
+        category: 'Clothing',
+      },
+      {
+        id: 'p8',
+        name: 'Wednesday Plush Toy',
+        price: 35,
+        image: 'https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=400',
+        brand: 'Netflix',
+        views: 14200,
+        isFavorited: false,
+        isBookmarked: true,
+        category: 'Toys',
+      },
+    ],
+  },
+];
+
+export const MOCK_NON_PRO_USERS = [
+  {
+    id: 'np1',
+    displayName: 'Rachel',
+    username: 'rachel_style',
+    avatar: 'https://i.pravatar.cc/150?img=5',
+    isVerified: false,
+    isPro: false,
+    totalViews: 8500,
   },
 ];
 
