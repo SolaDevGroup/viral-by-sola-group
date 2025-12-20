@@ -54,6 +54,7 @@ export default function HomeScreen() {
   const [selectedShortId, setSelectedShortId] = useState<string>('');
   const [showFeedSelector, setShowFeedSelector] = useState(false);
   const [selectedFeedType, setSelectedFeedType] = useState<FeedType>('social');
+  const [activeTab, setActiveTab] = useState<'reels' | 'live'>('reels');
   const [newFollower, setNewFollower] = useState<{
     id: string;
     username: string;
@@ -319,14 +320,24 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.tabsWrapper}>
-              <TouchableOpacity style={styles.tabItem}>
-                <Text style={styles.tabTextActive}>Shorts</Text>
+              <TouchableOpacity 
+                style={styles.tabItem}
+                onPress={() => setActiveTab('reels')}
+              >
+                <Text style={activeTab === 'reels' ? styles.tabTextActive : styles.tabTextInactive}>
+                  {activeTab === 'reels' ? 'Reels.' : 'Reels'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.tabItem}
-                onPress={() => router.push('/live-feed' as Href)}
+                onPress={() => {
+                  setActiveTab('live');
+                  router.push('/live-feed' as Href);
+                }}
               >
-                <Text style={styles.tabTextInactive}>Live</Text>
+                <Text style={activeTab === 'live' ? styles.tabTextActive : styles.tabTextInactive}>
+                  {activeTab === 'live' ? 'Live.' : 'Live'}
+                </Text>
               </TouchableOpacity>
             </View>
             
@@ -631,25 +642,25 @@ const styles = StyleSheet.create({
   },
   tabsWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'flex-start',
-    gap: 12,
+    gap: 8,
     flex: 1,
   },
   tabItem: {
     paddingHorizontal: 4,
   },
   tabTextActive: {
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: '600',
+    fontStyle: 'italic' as const,
     color: '#FFFFFF',
-    textAlign: 'left',
+    letterSpacing: -1.92,
   },
   tabTextInactive: {
     fontSize: 20,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.48)',
-    textAlign: 'center',
   },
   headerIcons: {
     flexDirection: 'row',
