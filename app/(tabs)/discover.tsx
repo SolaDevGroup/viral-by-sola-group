@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Dimensions, Image } from "react-native";
-import { DISCOVER_CATEGORIES, DISCOVER_VIDEOS } from "@/constants/mockData";
-import { X, SlidersHorizontal, Sliders, Search, Eye } from "lucide-react-native";
+import React, { useState, useMemo, useCallback } from "react";
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Dimensions, Image, FlatList } from "react-native";
+import { DISCOVER_CATEGORIES, DISCOVER_VIDEOS, SEARCH_ACCOUNTS, LIVE_STREAMS } from "@/constants/mockData";
+import { X, Search, Eye, Sliders, UserPlus, MessageSquare, Plus, BadgeCheck, Sparkles } from "lucide-react-native";
 import { Stack, router, Href } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
 import Colors from "@/constants/colors";
@@ -17,6 +17,8 @@ const SMALL_CARD_HEIGHT = (ROW_HEIGHT - CARD_GAP) / 2;
 
 type CardType = 'big' | 'small';
 type CardPosition = 0 | 1 | 2;
+type SearchTab = 'Accounts' | 'Reels' | 'Live';
+type AccountFilter = 'all' | 'pro' | 'verified';
 
 interface GridItem {
   video: typeof DISCOVER_VIDEOS[0];
@@ -24,11 +26,26 @@ interface GridItem {
   isPlaying: boolean;
 }
 
+interface SearchAccount {
+  id: string;
+  displayName: string;
+  username: string;
+  avatar: string;
+  isVerified: boolean;
+  isPro: boolean;
+  totalViews: number;
+  isFollowing: boolean;
+}
+
 export default function DiscoverScreen() {
   const { isDarkMode } = useApp();
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const [activeSearchTab, setActiveSearchTab] = useState<SearchTab>('Accounts');
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [followingState, setFollowingState] = useState<Record<string, boolean>>({});
 
   const filteredVideos = useMemo(() => {
     let filtered = DISCOVER_VIDEOS;
@@ -37,6 +54,34 @@ export default function DiscoverScreen() {
     }
     return filtered;
   }, [selectedCategory]);
+
+  const filteredLiveStreams = useMemo(() => {
+    let filtered = LIVE_STREAMS;
+    if (selectedCategory) {
+      filtered = filtered.filter(v => v.category === selectedCategory);
+    }
+    return filtered;
+  }, [selectedCategory]);
+
+  const filteredAccounts = useMemo(() => {
+    let accounts = [...SEARCH_ACCOUNTS].sort((a, b) => b.totalViews - a.totalViews);
+    
+    if (accountFilter === 'pro') {
+      accounts = accounts.filter(a => a.isPro);
+    } else if (accountFilter === 'verified') {
+      accounts = accounts.filter(a => a.isVerified);
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      accounts = accounts.filter(a => 
+        a.displayName.toLowerCase().includes(query) || 
+        a.username.toLowerCase().includes(query)
+      );
+    }
+    
+    return accounts;
+  }, [accountFilter, searchQuery]);
 
   const formatViews = (views: number) => {
     if (views >= 1000000) {
@@ -48,20 +93,20 @@ export default function DiscoverScreen() {
     return views.toString();
   };
 
-  const buildGridRows = () => {
+  const buildGridRows = (videos: typeof DISCOVER_VIDEOS) => {
     const rows: { items: GridItem[]; bigPosition: CardPosition }[] = [];
     let videoIndex = 0;
     let rowIndex = 0;
 
-    while (videoIndex < filteredVideos.length) {
+    while (videoIndex < videos.length) {
       const bigPosition = (rowIndex % 3) as CardPosition;
       const rowItems: GridItem[] = [];
       
       for (let col = 0; col < 3; col++) {
         if (col === bigPosition) {
-          if (videoIndex < filteredVideos.length) {
+          if (videoIndex < videos.length) {
             rowItems.push({
-              video: filteredVideos[videoIndex],
+              video: videos[videoIndex],
               type: 'big',
               isPlaying: true,
             });
@@ -70,9 +115,9 @@ export default function DiscoverScreen() {
         } else {
           const smallItems: GridItem[] = [];
           for (let i = 0; i < 2; i++) {
-            if (videoIndex < filteredVideos.length) {
+            if (videoIndex < videos.length) {
               smallItems.push({
-                video: filteredVideos[videoIndex],
+                video: videos[videoIndex],
                 type: 'small',
                 isPlaying: false,
               });
@@ -92,10 +137,19 @@ export default function DiscoverScreen() {
     return rows;
   };
 
-  const gridRows = buildGridRows();
+  const gridRows = buildGridRows(filteredVideos);
+  const liveGridRows = useMemo(() => {
+    return buildGridRows(filteredLiveStreams.map(l => ({
+      id: l.id,
+      videoUrl: l.videoUrl,
+      thumbnailUrl: l.thumbnailUrl,
+      views: l.viewers,
+      category: l.category,
+    })));
+  }, [filteredLiveStreams]);
 
-  const renderViewBadge = (views: number) => (
-    <View style={styles.viewsBadge}>
+  const renderViewBadge = (views: number, isLive: boolean = false) => (
+    <View style={[styles.viewsBadge, isLive && styles.liveViewsBadge]}>
       <Eye size={12} color="#FFFFFF" strokeWidth={2} />
       <Text style={styles.viewsText}>{formatViews(views)}</Text>
     </View>
@@ -106,12 +160,31 @@ export default function DiscoverScreen() {
     router.push(`/video-feed?index=${videoIndex}` as Href);
   };
 
-  const renderBigCard = (item: GridItem) => (
+  const handleLiveCardPress = (liveId: string) => {
+    router.push(`/live-feed?liveId=${liveId}` as Href);
+  };
+
+  const handleFollowToggle = useCallback((accountId: string, currentFollowing: boolean) => {
+    setFollowingState(prev => ({
+      ...prev,
+      [accountId]: !currentFollowing
+    }));
+  }, []);
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setIsSearchFocused(false);
+    setActiveSearchTab('Accounts');
+    setAccountFilter('all');
+    setSelectedCategory(null);
+  };
+
+  const renderBigCard = (item: GridItem, isLive: boolean = false) => (
     <TouchableOpacity
       key={item.video.id}
       style={styles.bigCard}
       activeOpacity={0.9}
-      onPress={() => handleCardPress(item.video.id)}
+      onPress={() => isLive ? handleLiveCardPress(item.video.id) : handleCardPress(item.video.id)}
     >
       <Video
         source={{ uri: item.video.videoUrl }}
@@ -122,26 +195,26 @@ export default function DiscoverScreen() {
         isMuted
         useNativeControls={false}
       />
-      {renderViewBadge(item.video.views)}
+      {renderViewBadge(item.video.views, isLive)}
     </TouchableOpacity>
   );
 
-  const renderSmallCard = (item: GridItem) => (
+  const renderSmallCard = (item: GridItem, isLive: boolean = false) => (
     <TouchableOpacity
       key={item.video.id}
       style={styles.smallCard}
       activeOpacity={0.9}
-      onPress={() => handleCardPress(item.video.id)}
+      onPress={() => isLive ? handleLiveCardPress(item.video.id) : handleCardPress(item.video.id)}
     >
       <Image
         source={{ uri: item.video.thumbnailUrl }}
         style={styles.cardMedia}
       />
-      {renderViewBadge(item.video.views)}
+      {renderViewBadge(item.video.views, isLive)}
     </TouchableOpacity>
   );
 
-  const renderRow = (row: { items: GridItem[]; bigPosition: CardPosition }, rowIndex: number) => {
+  const renderRow = (row: { items: GridItem[]; bigPosition: CardPosition }, rowIndex: number, isLive: boolean = false) => {
     const { items, bigPosition } = row;
     
     const bigItem = items.find(item => item.type === 'big');
@@ -154,7 +227,7 @@ export default function DiscoverScreen() {
       if (col === bigPosition && bigItem) {
         columns.push(
           <View key={`col-${col}`} style={styles.column}>
-            {renderBigCard(bigItem)}
+            {renderBigCard(bigItem, isLive)}
           </View>
         );
       } else {
@@ -162,7 +235,7 @@ export default function DiscoverScreen() {
         smallIndex += 2;
         columns.push(
           <View key={`col-${col}`} style={styles.column}>
-            {colSmallItems.map(item => renderSmallCard(item))}
+            {colSmallItems.map(item => renderSmallCard(item, isLive))}
           </View>
         );
       }
@@ -175,42 +248,142 @@ export default function DiscoverScreen() {
     );
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <View style={styles.searchRow}>
-          <View style={[styles.searchContainer, { backgroundColor: theme.inputBackground }]}>
-            <Search size={24} color={theme.textSecondary} strokeWidth={2} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Eg. Plombier..."
-              placeholderTextColor={theme.textTertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <X size={22} color={theme.textTertiary} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity style={[styles.filterButton, { borderColor: theme.border }]}>
-            <Sliders size={20} color={theme.text} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesContainer}
+  const renderAccountItem = ({ item }: { item: SearchAccount }) => {
+    const isFollowing = followingState[item.id] ?? item.isFollowing;
+    
+    return (
+      <View style={styles.accountItem}>
+        <TouchableOpacity 
+          style={styles.accountInfo}
+          onPress={() => router.push(`/profile/${item.id}` as Href)}
         >
-          <TouchableOpacity 
-            style={[styles.categoryChip, styles.editChip, { backgroundColor: theme.inputBackground }]}
+          <View style={[styles.avatarContainer, item.isPro && styles.proAvatarBorder]}>
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          </View>
+          <View style={styles.accountDetails}>
+            <View style={styles.nameRow}>
+              <Text style={[styles.displayName, { color: theme.text }]} numberOfLines={1}>
+                {item.displayName}
+              </Text>
+              {item.isVerified && (
+                <BadgeCheck size={14} color="#007BFF" fill="#007BFF" strokeWidth={0} style={styles.verifiedIcon} />
+              )}
+            </View>
+            <View style={styles.statsRow}>
+              <Text style={[styles.username, { color: theme.textSecondary }]}>@{item.username}</Text>
+              <View style={styles.dotSeparator} />
+              <Text style={[styles.viewsCount, { color: theme.textSecondary }]}>
+                {formatViews(item.totalViews)} views
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.accountActions}>
+          {item.isPro ? (
+            <>
+              <TouchableOpacity 
+                style={[styles.followButton, isFollowing && styles.followingButton]}
+                onPress={() => handleFollowToggle(item.id, isFollowing)}
+              >
+                <UserPlus size={16} color="#FFFFFF" strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.messageButton}>
+                <MessageSquare size={16} color={theme.text} strokeWidth={2} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => handleFollowToggle(item.id, isFollowing)}
+            >
+              <Plus size={20} color={theme.textSecondary} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderSearchTabs = () => (
+    <ScrollView 
+      horizontal 
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.searchTabsContainer}
+    >
+      {(['Accounts', 'Reels', 'Live'] as SearchTab[]).map((tab) => (
+        <TouchableOpacity
+          key={tab}
+          style={[
+            styles.searchTab,
+            activeSearchTab === tab && styles.searchTabActive
+          ]}
+          onPress={() => {
+            setActiveSearchTab(tab);
+            setSelectedCategory(null);
+          }}
+        >
+          <Text style={[
+            styles.searchTabText,
+            { color: activeSearchTab === tab ? '#FFFFFF' : theme.text }
+          ]}>{tab}</Text>
+        </TouchableOpacity>
+      ))}
+      
+      {activeSearchTab === 'Accounts' && (
+        <>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              { backgroundColor: theme.inputBackground },
+              accountFilter === 'pro' && styles.filterTabActive
+            ]}
+            onPress={() => setAccountFilter(accountFilter === 'pro' ? 'all' : 'pro')}
+          >
+            <Sparkles size={14} color={accountFilter === 'pro' ? '#FFFFFF' : theme.text} strokeWidth={2} />
+            <Text style={[
+              styles.filterTabText,
+              { color: accountFilter === 'pro' ? '#FFFFFF' : theme.text }
+            ]}>Pro</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              { backgroundColor: theme.inputBackground },
+              accountFilter === 'verified' && styles.filterTabActive
+            ]}
+            onPress={() => setAccountFilter(accountFilter === 'verified' ? 'all' : 'verified')}
+          >
+            <BadgeCheck size={14} color={accountFilter === 'verified' ? '#FFFFFF' : theme.text} strokeWidth={2} />
+            <Text style={[
+              styles.filterTabText,
+              { color: accountFilter === 'verified' ? '#FFFFFF' : theme.text }
+            ]}>Verified</Text>
+          </TouchableOpacity>
+        </>
+      )}
+      
+      {(activeSearchTab === 'Reels' || activeSearchTab === 'Live') && (
+        <>
+          <TouchableOpacity
+            style={[
+              styles.categoryChip,
+              { backgroundColor: theme.inputBackground },
+              !selectedCategory && styles.categoryChipActive
+            ]}
             onPress={() => setSelectedCategory(null)}
           >
-            <SlidersHorizontal size={16} color={theme.text} strokeWidth={2} />
+            <Text style={[
+              styles.categoryText,
+              { color: !selectedCategory ? '#121212' : theme.text }
+            ]}>Reels</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.categoryChip,
+              { backgroundColor: theme.inputBackground }
+            ]}
+          >
+            <Text style={[styles.categoryText, { color: theme.text }]}>#tag</Text>
           </TouchableOpacity>
           {DISCOVER_CATEGORIES.map((category) => (
             <TouchableOpacity
@@ -226,23 +399,107 @@ export default function DiscoverScreen() {
             >
               <Text style={[
                 styles.categoryText,
-                { color: theme.text },
-                selectedCategory === category.name && styles.categoryTextActive
+                { color: selectedCategory === category.name ? '#121212' : theme.text }
               ]}>{category.name}</Text>
             </TouchableOpacity>
           ))}
+        </>
+      )}
+    </ScrollView>
+  );
+
+  const renderContent = () => {
+    if (!isSearchFocused) {
+      return (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.gridContainer}>
+            {gridRows.map((row, index) => renderRow(row, index))}
+          </View>
         </ScrollView>
+      );
+    }
+
+    if (activeSearchTab === 'Accounts') {
+      return (
+        <FlatList
+          data={filteredAccounts}
+          renderItem={renderAccountItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.accountsList}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.border }]} />}
+        />
+      );
+    }
+
+    if (activeSearchTab === 'Reels') {
+      return (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.gridContainer}>
+            {gridRows.map((row, index) => renderRow(row, index, false))}
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (activeSearchTab === 'Live') {
+      return (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.gridContainer}>
+            {liveGridRows.map((row, index) => renderRow(row, index, true))}
+          </View>
+        </ScrollView>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={styles.searchRow}>
+          <View style={[styles.searchContainer, { backgroundColor: theme.inputBackground }]}>
+            <Search size={24} color={theme.textSecondary} strokeWidth={2} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder={isSearchFocused ? "Search..." : "Search Accounts, Reels, Live..."}
+              placeholderTextColor={theme.textTertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+            />
+            {(searchQuery.length > 0 || isSearchFocused) && (
+              <TouchableOpacity onPress={handleClearSearch}>
+                <X size={22} color={theme.textTertiary} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
+          {isSearchFocused && activeSearchTab === 'Accounts' && (
+            <TouchableOpacity style={[styles.filterButton, { borderColor: theme.border }]}>
+              <Sliders size={20} color={theme.text} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isSearchFocused && renderSearchTabs()}
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.gridContainer}>
-          {gridRows.map((row, index) => renderRow(row, index))}
-        </View>
-      </ScrollView>
+      {renderContent()}
     </View>
   );
 }
@@ -250,10 +507,10 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    backgroundColor: "#121212",
+    backgroundColor: "#FFFFFF",
     paddingTop: 52,
     paddingHorizontal: 12,
     paddingBottom: 8,
@@ -268,7 +525,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: "rgba(18, 18, 18, 0.04)",
     borderRadius: 100,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -278,8 +535,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    fontFamily: "Poppins-Medium",
     fontWeight: "500" as const,
-    color: "#FFFFFF",
+    color: "#121212",
     padding: 0,
     margin: 0,
   },
@@ -288,20 +546,54 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "rgba(18, 18, 18, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
-  categoriesContainer: {
+  searchTabsContainer: {
     flexDirection: "row",
     gap: 4,
     paddingBottom: 4,
+  },
+  searchTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    height: 32,
+    backgroundColor: "rgba(18, 18, 18, 0.04)",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchTabActive: {
+    backgroundColor: "#121212",
+  },
+  searchTabText: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    fontWeight: "500" as const,
+  },
+  filterTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    height: 32,
+    borderRadius: 8,
+    gap: 4,
+  },
+  filterTabActive: {
+    backgroundColor: "#121212",
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    fontWeight: "500" as const,
   },
   categoryChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     height: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: "rgba(18, 18, 18, 0.04)",
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -309,17 +601,10 @@ const styles = StyleSheet.create({
   categoryChipActive: {
     backgroundColor: "#FFFFFF",
   },
-  editChip: {
-    paddingHorizontal: 10,
-    width: 36,
-  },
   categoryText: {
     fontSize: 14,
+    fontFamily: "Poppins-Medium",
     fontWeight: "500" as const,
-    color: "#FFFFFF",
-  },
-  categoryTextActive: {
-    color: "#121212",
   },
   scrollView: {
     flex: 1,
@@ -372,10 +657,123 @@ const styles = StyleSheet.create({
     borderRadius: 87.5,
     gap: 2,
   },
+  liveViewsBadge: {
+    backgroundColor: '#FF4D67',
+  },
   viewsText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontFamily: "Poppins-SemiBold",
     fontWeight: '600' as const,
     letterSpacing: -0.24,
+  },
+  accountsList: {
+    paddingHorizontal: 12,
+    paddingBottom: 98,
+  },
+  accountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  accountInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 100,
+    padding: 4,
+  },
+  proAvatarBorder: {
+    borderWidth: 2,
+    borderColor: '#014D3A',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 100,
+  },
+  accountDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  displayName: {
+    fontSize: 16,
+    fontFamily: "Poppins-Medium",
+    fontWeight: '500' as const,
+    letterSpacing: -0.5,
+    textTransform: 'capitalize',
+  },
+  verifiedIcon: {
+    marginLeft: 2,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  username: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    fontWeight: '500' as const,
+    letterSpacing: -0.14,
+  },
+  dotSeparator: {
+    width: 3,
+    height: 3,
+    borderRadius: 100,
+    backgroundColor: 'rgba(18, 18, 18, 0.16)',
+  },
+  viewsCount: {
+    fontSize: 12,
+    fontFamily: "Poppins-Medium",
+    fontWeight: '500' as const,
+    letterSpacing: -0.24,
+  },
+  accountActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  followButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: '#014D3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  followingButton: {
+    backgroundColor: 'rgba(1, 77, 58, 0.5)',
+  },
+  messageButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: 'rgba(11, 44, 19, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
   },
 });
