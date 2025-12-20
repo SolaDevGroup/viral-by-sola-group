@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Dimensions, Image, FlatList } from "react-native";
 import { DISCOVER_CATEGORIES, DISCOVER_VIDEOS, SEARCH_ACCOUNTS, LIVE_STREAMS } from "@/constants/mockData";
-import { X, Search, Eye, Sliders, UserPlus, MessageSquare, Plus, BadgeCheck, Sparkles } from "lucide-react-native";
+import { X, Search, Eye, Sliders, UserPlus, MessageSquare, Plus, BadgeCheck, ShieldCheck } from "lucide-react-native";
 import { Stack, router, Href } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
 import Colors from "@/constants/colors";
@@ -250,6 +250,7 @@ export default function DiscoverScreen() {
 
   const renderAccountItem = ({ item }: { item: SearchAccount }) => {
     const isFollowing = followingState[item.id] ?? item.isFollowing;
+    const showFullActions = item.isPro || item.isVerified;
     
     return (
       <View style={styles.accountItem}>
@@ -257,7 +258,10 @@ export default function DiscoverScreen() {
           style={styles.accountInfo}
           onPress={() => router.push(`/profile/${item.id}` as Href)}
         >
-          <View style={[styles.avatarContainer, item.isPro && styles.proAvatarBorder]}>
+          <View style={[
+            styles.avatarContainer, 
+            item.isPro ? styles.proAvatarBorder : styles.regularAvatarBorder
+          ]}>
             <Image source={{ uri: item.avatar }} style={styles.avatar} />
           </View>
           <View style={styles.accountDetails}>
@@ -270,7 +274,7 @@ export default function DiscoverScreen() {
               )}
             </View>
             <View style={styles.statsRow}>
-              <Text style={[styles.username, { color: theme.textSecondary }]}>@{item.username}</Text>
+              <Text style={[styles.username, { color: theme.textSecondary }]}>{item.username}</Text>
               <View style={styles.dotSeparator} />
               <Text style={[styles.viewsCount, { color: theme.textSecondary }]}>
                 {formatViews(item.totalViews)} views
@@ -279,16 +283,16 @@ export default function DiscoverScreen() {
           </View>
         </TouchableOpacity>
         <View style={styles.accountActions}>
-          {item.isPro ? (
+          {showFullActions ? (
             <>
               <TouchableOpacity 
                 style={[styles.followButton, isFollowing && styles.followingButton]}
                 onPress={() => handleFollowToggle(item.id, isFollowing)}
               >
-                <UserPlus size={16} color="#FFFFFF" strokeWidth={2} />
+                <UserPlus size={20} color="#FFFFFF" strokeWidth={2} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.messageButton}>
-                <MessageSquare size={16} color={theme.text} strokeWidth={2} />
+                <MessageSquare size={20} color="#121212" strokeWidth={2} fill="#121212" />
               </TouchableOpacity>
             </>
           ) : (
@@ -296,7 +300,7 @@ export default function DiscoverScreen() {
               style={styles.addButton}
               onPress={() => handleFollowToggle(item.id, isFollowing)}
             >
-              <Plus size={20} color={theme.textSecondary} strokeWidth={2} />
+              <Plus size={20} color="#121212" strokeWidth={2} />
             </TouchableOpacity>
           )}
         </View>
@@ -339,7 +343,7 @@ export default function DiscoverScreen() {
             ]}
             onPress={() => setAccountFilter(accountFilter === 'pro' ? 'all' : 'pro')}
           >
-            <Sparkles size={14} color={accountFilter === 'pro' ? '#FFFFFF' : theme.text} strokeWidth={2} />
+            <BadgeCheck size={18} color={accountFilter === 'pro' ? '#FFFFFF' : '#121212'} fill={accountFilter === 'pro' ? '#FFFFFF' : '#121212'} strokeWidth={0} />
             <Text style={[
               styles.filterTabText,
               { color: accountFilter === 'pro' ? '#FFFFFF' : theme.text }
@@ -353,7 +357,7 @@ export default function DiscoverScreen() {
             ]}
             onPress={() => setAccountFilter(accountFilter === 'verified' ? 'all' : 'verified')}
           >
-            <BadgeCheck size={14} color={accountFilter === 'verified' ? '#FFFFFF' : theme.text} strokeWidth={2} />
+            <ShieldCheck size={18} color={accountFilter === 'verified' ? '#FFFFFF' : '#121212'} strokeWidth={2} />
             <Text style={[
               styles.filterTabText,
               { color: accountFilter === 'verified' ? '#FFFFFF' : theme.text }
@@ -576,10 +580,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
+    paddingLeft: 6,
     paddingVertical: 6,
     height: 32,
     borderRadius: 8,
-    gap: 4,
+    gap: 2,
   },
   filterTabActive: {
     backgroundColor: "#121212",
@@ -688,14 +693,20 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 100,
     padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   proAvatarBorder: {
     borderWidth: 2,
     borderColor: '#014D3A',
   },
+  regularAvatarBorder: {
+    borderWidth: 2,
+    borderColor: 'rgba(18, 18, 18, 0.64)',
+  },
   avatar: {
-    width: '100%',
-    height: '100%',
+    width: 40,
+    height: 40,
     borderRadius: 100,
   },
   accountDetails: {
@@ -760,7 +771,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 100,
-    backgroundColor: 'rgba(11, 44, 19, 0.04)',
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
