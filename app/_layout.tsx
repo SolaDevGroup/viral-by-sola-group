@@ -46,6 +46,15 @@ function RootLayoutNav() {
       <Stack.Screen name="post-video" />
       <Stack.Screen name="story-viewer" options={{ animation: 'fade' }} />
       <Stack.Screen name="product/[productId]" />
+      <Stack.Screen name="checkout" />
+      <Stack.Screen name="create-ad" />
+      <Stack.Screen name="registration" />
+      <Stack.Screen name="settings/account-info" />
+      <Stack.Screen name="settings/switch-account" />
+      <Stack.Screen name="settings/privacy" />
+      <Stack.Screen name="settings/security" />
+      <Stack.Screen name="settings/notifications-settings" />
+      <Stack.Screen name="settings/view-settings" />
     </Stack>
   );
 }
