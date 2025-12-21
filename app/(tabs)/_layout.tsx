@@ -144,7 +144,7 @@ export default function TabLayout() {
         }}
         listeners={{
           tabPress: (e) => {
-            const isOnHomeTab = pathname === '/home' || pathname === '/';
+            const isOnHomeTab = pathname.includes('/home');
             if (isOnHomeTab) {
               e.preventDefault();
               router.setParams({ showFeedSelector: 'true' });

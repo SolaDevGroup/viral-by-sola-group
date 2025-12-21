@@ -351,7 +351,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.iconContainer}
-                onPress={() => router.push('/(tabs)/chat' as Href)}
+                onPress={() => router.push('/conversation/1' as Href)}
               >
                 <Inbox size={24} color="#FFFFFF" />
               </TouchableOpacity>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, Href } from 'expo-router';
-import { View } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import SplashScreen from './splash';
 
 export default function Index() {
@@ -8,18 +8,31 @@ export default function Index() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    console.log('[Index] Mounting, will navigate to home in 1s');
     const timeout = setTimeout(() => {
+      console.log('[Index] Navigating to home...');
       setShowSplash(false);
-      // Bypass onboarding and auth - go directly to home
-      router.replace('/(tabs)/home' as Href);
+      try {
+        router.replace('/(tabs)/home' as Href);
+        console.log('[Index] Navigation initiated');
+      } catch (error) {
+        console.error('[Index] Navigation error:', error);
+      }
     }, 1000);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      console.log('[Index] Unmounting');
+      clearTimeout(timeout);
+    };
   }, [router]);
 
   if (showSplash) {
     return <SplashScreen />;
   }
 
-  return <View style={{ flex: 1 }} />;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#37B874" />
+    </View>
+  );
 }
