@@ -8,9 +8,9 @@ export default function Index() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    console.log('[Index] Mounting, will navigate to home in 1s');
+    console.log('[Index] Mounting, will show splash for 2s');
     const timeout = setTimeout(() => {
-      console.log('[Index] Navigating to home...');
+      console.log('[Index] Navigating to discover...');
       setShowSplash(false);
       try {
         router.replace('/(tabs)/discover' as Href);
@@ -18,7 +18,7 @@ export default function Index() {
       } catch (error) {
         console.error('[Index] Navigation error:', error);
       }
-    }, 1000);
+    }, 2000);
 
     return () => {
       console.log('[Index] Unmounting');
