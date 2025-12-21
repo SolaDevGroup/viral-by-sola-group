@@ -1,4 +1,4 @@
-import { Tabs, router } from "expo-router";
+import { Tabs, router, usePathname } from "expo-router";
 import React from "react";
 import Svg, { Defs, LinearGradient, Stop, Path, Circle } from "react-native-svg";
 import Colors from "@/constants/colors";
@@ -119,6 +119,7 @@ const UserFilled = ({ size }: { size: number }) => (
 export default function TabLayout() {
   const { isDarkMode, accentColor } = useApp();
   const theme = isDarkMode ? Colors.dark : Colors.light;
+  const pathname = usePathname();
 
   return (
     <Tabs
@@ -143,8 +144,8 @@ export default function TabLayout() {
         }}
         listeners={{
           tabPress: (e) => {
-            const currentPath = router.canGoBack() ? '' : '/';
-            if (currentPath === '/' || currentPath === '' || currentPath === '/home') {
+            const isOnHomeTab = pathname === '/home' || pathname === '/';
+            if (isOnHomeTab) {
               e.preventDefault();
               router.setParams({ showFeedSelector: 'true' });
             }
