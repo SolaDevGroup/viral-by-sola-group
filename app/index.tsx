@@ -13,7 +13,7 @@ export default function Index() {
       console.log('[Index] Navigating to home...');
       setShowSplash(false);
       try {
-        router.replace('/(tabs)/home' as Href);
+        router.replace('/(tabs)/discover' as Href);
         console.log('[Index] Navigation initiated');
       } catch (error) {
         console.error('[Index] Navigation error:', error);
