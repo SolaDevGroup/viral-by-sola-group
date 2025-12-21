@@ -30,17 +30,38 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
   const [accentColor, setAccentColorState] = useState<string>('#014D3A');
 
   useEffect(() => {
-    loadUserData();
+    const initializeApp = async () => {
+      try {
+        await loadUserData();
+      } catch (error) {
+        console.error('Failed to initialize app, clearing all data:', error);
+        try {
+          await AsyncStorage.clear();
+        } catch (clearError) {
+          console.error('Failed to clear AsyncStorage:', clearError);
+        }
+      }
+    };
+    
+    initializeApp();
   }, []);
 
   const loadUserData = async () => {
     try {
-      const [authData, onboardingData, userData, colorData] = await Promise.all([
-        AsyncStorage.getItem('viral_auth'),
-        AsyncStorage.getItem('viral_onboarding'),
-        AsyncStorage.getItem('viral_user'),
-        AsyncStorage.getItem('viral_accent_color'),
-      ]);
+      let authData, onboardingData, userData, colorData;
+      
+      try {
+        [authData, onboardingData, userData, colorData] = await Promise.all([
+          AsyncStorage.getItem('viral_auth'),
+          AsyncStorage.getItem('viral_onboarding'),
+          AsyncStorage.getItem('viral_user'),
+          AsyncStorage.getItem('viral_accent_color'),
+        ]);
+      } catch (storageError) {
+        console.error('AsyncStorage read error, clearing all data:', storageError);
+        await AsyncStorage.multiRemove(['viral_auth', 'viral_user', 'viral_onboarding', 'viral_accent_color', 'viral_is_minor']);
+        return;
+      }
 
       console.log('Loading app data...', { hasAuth: !!authData, hasOnboarding: !!onboardingData, hasUser: !!userData, hasColor: !!colorData });
 
@@ -56,7 +77,7 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
         setHasCompletedOnboarding(true);
       }
 
-      if (userData) {
+      if (userData && typeof userData === 'string') {
         try {
           const trimmedData = userData.trim();
           
@@ -73,7 +94,13 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
           }
           
           if (!trimmedData.startsWith('{') && !trimmedData.startsWith('[')) {
-            console.error('Invalid user data format (not JSON), clearing. First 50 chars:', trimmedData.substring(0, 50));
+            console.error('Invalid user data format (not JSON), clearing. First 50 chars:', trimmedData.substring(0, Math.min(50, trimmedData.length)));
+            await AsyncStorage.removeItem('viral_user');
+            return;
+          }
+          
+          if (trimmedData.includes('undefined') || trimmedData.includes('NaN')) {
+            console.error('User data contains invalid values, clearing');
             await AsyncStorage.removeItem('viral_user');
             return;
           }
