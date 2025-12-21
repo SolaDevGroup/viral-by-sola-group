@@ -59,7 +59,7 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
         ]);
       } catch (storageError) {
         console.error('AsyncStorage read error, clearing all data:', storageError);
-        await AsyncStorage.multiRemove(['viral_auth', 'viral_user', 'viral_onboarding', 'viral_accent_color', 'viral_is_minor']);
+        await AsyncStorage.clear();
         return;
       }
 
@@ -83,25 +83,25 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
           
           if (!trimmedData || trimmedData.length === 0) {
             console.log('Empty user data, clearing');
-            await AsyncStorage.removeItem('viral_user');
+            await AsyncStorage.clear();
             return;
           }
           
-          if (trimmedData === 'true' || trimmedData === 'false' || trimmedData === 'null' || trimmedData === 'undefined') {
-            console.log('Invalid primitive value in user data, clearing:', trimmedData);
-            await AsyncStorage.removeItem('viral_user');
+          if (trimmedData === 'true' || trimmedData === 'false' || trimmedData === 'null' || trimmedData === 'undefined' || trimmedData === '[object Object]' || trimmedData.startsWith('[object')) {
+            console.log('Invalid primitive or object string in user data, clearing:', trimmedData.substring(0, 50));
+            await AsyncStorage.clear();
             return;
           }
           
           if (!trimmedData.startsWith('{') && !trimmedData.startsWith('[')) {
             console.error('Invalid user data format (not JSON), clearing. First 50 chars:', trimmedData.substring(0, Math.min(50, trimmedData.length)));
-            await AsyncStorage.removeItem('viral_user');
+            await AsyncStorage.clear();
             return;
           }
           
           if (trimmedData.includes('undefined') || trimmedData.includes('NaN')) {
             console.error('User data contains invalid values, clearing');
-            await AsyncStorage.removeItem('viral_user');
+            await AsyncStorage.clear();
             return;
           }
           
@@ -109,9 +109,9 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
           try {
             parsed = JSON.parse(trimmedData);
           } catch (jsonError) {
-            console.error('JSON parse failed:', jsonError);
+            console.error('JSON parse failed, clearing all storage:', jsonError);
             console.error('Attempted to parse:', trimmedData.substring(0, 200));
-            await AsyncStorage.removeItem('viral_user');
+            await AsyncStorage.clear();
             return;
           }
           
@@ -120,18 +120,18 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
             console.log('User data loaded successfully');
           } else {
             console.error('Parsed data is not a valid user object, clearing');
-            await AsyncStorage.removeItem('viral_user');
+            await AsyncStorage.clear();
           }
         } catch (parseError) {
-          console.error('Failed to load user data, clearing corrupted data:', parseError);
+          console.error('Failed to load user data, clearing all corrupted data:', parseError);
           console.error('Raw data:', userData?.substring(0, 100) || 'undefined');
-          await AsyncStorage.removeItem('viral_user');
+          await AsyncStorage.clear();
         }
       }
     } catch (error) {
       console.error('Critical error loading user data, clearing all storage:', error);
       try {
-        await AsyncStorage.multiRemove(['viral_auth', 'viral_user', 'viral_onboarding', 'viral_is_minor']);
+        await AsyncStorage.clear();
         setIsAuthenticated(false);
         setHasCompletedOnboarding(false);
         setUser(null);
@@ -155,7 +155,7 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
     setUser(null);
     setIsAuthenticated(false);
     setHasCompletedOnboarding(false);
-    await AsyncStorage.multiRemove(['viral_auth', 'viral_user', 'viral_onboarding']);
+    await AsyncStorage.clear();
   };
 
   const signup = async (username: string, email: string, password: string, age: number) => {
