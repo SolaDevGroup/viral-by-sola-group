@@ -299,13 +299,8 @@ export default function HomeScreen() {
     const isTabBarVisible = index === 0 ? true : isTabBarVisibleState;
     const isMomentsVisible = index === 0;
     
-    let cardHeight = SCREEN_HEIGHT - HEADER_HEIGHT;
-    if (isMomentsVisible) {
-      cardHeight -= MOMENTS_HEIGHT;
-    }
-    if (isTabBarVisible) {
-      cardHeight -= TAB_BAR_HEIGHT;
-    }
+    // Use consistent heights matching getItemLayout to prevent alignment issues when scrolling
+    const cardHeight = index === 0 ? FIRST_CARD_HEIGHT : EXPANDED_CARD_HEIGHT;
 
     if (item.type === 'suggestions') {
       return (
