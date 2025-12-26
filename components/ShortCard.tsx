@@ -12,7 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { MoreVertical, Eye, Bookmark, MessageCircle, Heart, Volume2, HandHeart, Lock, VolumeX, ArrowUpRight, Crown } from 'lucide-react-native';
+import { MoreVertical, Eye, Bookmark, MessageCircle, Heart, Volume2, HandHeart, Lock, VolumeX, ArrowUpRight, Crown, MapPin } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -461,24 +461,73 @@ export default function ShortCard({
           !showFullUI && styles.bottomSectionCompact,
           { paddingBottom: isTabBarVisible ? 12 : 42 }
         ]}>
-          <View style={styles.captionRow}>
+          <View style={styles.captionInfoRow}>
             <TouchableOpacity 
-              style={styles.captionLeft}
+              style={styles.captionInfoLeft}
               onPress={(e: any) => {
                 e.stopPropagation();
                 setCaptionExpanded(!captionExpanded);
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.caption} numberOfLines={captionExpanded ? undefined : 1}>
+              {short.category && (
+                <View style={styles.categoryChip}>
+                  <Text style={styles.categoryChipText}>{short.category}</Text>
+                </View>
+              )}
+              <Text style={styles.caption} numberOfLines={captionExpanded ? undefined : 2}>
                 {short.caption}
               </Text>
               <View style={styles.tagsRow}>
-                {short.tags?.slice(0, 2).map((tag, i) => (
+                {short.tags?.slice(0, 3).map((tag, i) => (
                   <Text key={i} style={styles.tag}>#{tag}</Text>
                 ))}
               </View>
+              {short.location && (
+                <View style={styles.locationRow}>
+                  <MapPin size={12} color="#FFFFFF" />
+                  <Text style={styles.locationText}>{short.location}</Text>
+                </View>
+              )}
+              <View style={styles.postedByRow}>
+                <Image 
+                  source={{ uri: short.user.avatar || 'https://i.pravatar.cc/150' }} 
+                  style={styles.postedByAvatar} 
+                />
+                <View style={styles.postedByTextRow}>
+                  <Text style={styles.postedByLabel}>Posted by </Text>
+                  <Text style={styles.postedByUsername}>@{short.user.username}</Text>
+                  <Text style={styles.postedByLabel}> on </Text>
+                  <Text style={styles.postedByChannel}>@{short.channel || 'main'}</Text>
+                </View>
+              </View>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickSaveButton}
+              onPress={handleSave}
+              activeOpacity={0.7}
+            >
+              {Platform.OS !== 'web' ? (
+                <BlurView intensity={8} tint="dark" style={styles.quickSaveBtnBlur}>
+                  <Bookmark 
+                    color="#FFFFFF" 
+                    fill={isSaved ? "#FFFFFF" : "transparent"}
+                    size={16} 
+                  />
+                </BlurView>
+              ) : (
+                <View style={styles.quickSaveBtnInner}>
+                  <Bookmark 
+                    color="#FFFFFF" 
+                    fill={isSaved ? "#FFFFFF" : "transparent"}
+                    size={16} 
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.soundButtonRow}>
             <TouchableOpacity 
               style={styles.soundButton}
               onPress={(e: any) => {
@@ -950,16 +999,99 @@ const styles = StyleSheet.create({
   bottomSectionCompact: {
     paddingTop: 8,
   },
-  captionRow: {
+  captionInfoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 32,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    gap: 8,
   },
-  captionLeft: {
+  captionInfoLeft: {
     flex: 1,
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 4,
+    height: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 4,
     justifyContent: 'center',
-    gap: 6,
+    alignItems: 'center',
+  },
+  categoryChipText: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  locationText: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
+  postedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  postedByAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 100,
+  },
+  postedByTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap' as const,
+  },
+  postedByLabel: {
+    fontSize: 12,
+    fontWeight: '400' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
+  postedByUsername: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
+  postedByChannel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
+  quickSaveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  quickSaveBtnBlur: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickSaveBtnInner: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  soundButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   caption: {
     fontSize: 14,
@@ -974,7 +1106,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap' as const,
   },
   tag: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '400' as const,
     color: 'rgba(255, 255, 255, 0.48)',
     letterSpacing: -0.07,

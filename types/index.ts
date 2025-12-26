@@ -42,6 +42,9 @@ export interface Short {
   thumbnailUrl: string;
   caption: string;
   tags: string[];
+  category?: string;
+  location?: string;
+  channel?: string;
   soundName?: string;
   soundAuthor?: string;
   likes: number;
