@@ -24,6 +24,7 @@ import { useApp } from '@/contexts/AppContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = 136;
+const BLUR_SECTION_HEIGHT = 32;
 const MOMENTS_HEIGHT = 108;
 const TAB_BAR_HEIGHT = 83;
 const FIRST_CARD_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - MOMENTS_HEIGHT - TAB_BAR_HEIGHT;
@@ -317,6 +318,90 @@ export default function HomeScreen() {
             />
           </BlurView>
         )}
+        
+        {/* Progressive blur at bottom of header */}
+        <View style={styles.progressiveBlurContainer} pointerEvents="none">
+          {Platform.OS === 'web' ? (
+            <>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT }]}>
+                <LinearGradient
+                  colors={['transparent', `${selectedCategoryColor}20`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.75 }]}>
+                <LinearGradient
+                  colors={['transparent', `${selectedCategoryColor}40`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.5 }]}>
+                <LinearGradient
+                  colors={['transparent', `${selectedCategoryColor}60`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.25 }]}>
+                <LinearGradient
+                  colors={['transparent', `${selectedCategoryColor}80`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT }]}>
+                <BlurView intensity={4} tint="dark" style={StyleSheet.absoluteFill}>
+                  <LinearGradient
+                    colors={['transparent', `${selectedCategoryColor}30`]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </BlurView>
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.75 }]}>
+                <BlurView intensity={12} tint="dark" style={StyleSheet.absoluteFill}>
+                  <LinearGradient
+                    colors={['transparent', `${selectedCategoryColor}50`]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </BlurView>
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.5 }]}>
+                <BlurView intensity={24} tint="dark" style={StyleSheet.absoluteFill}>
+                  <LinearGradient
+                    colors={['transparent', `${selectedCategoryColor}70`]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </BlurView>
+              </View>
+              <View style={[styles.blurLayer, { bottom: 0, height: BLUR_SECTION_HEIGHT * 0.25 }]}>
+                <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill}>
+                  <LinearGradient
+                    colors={['transparent', `${selectedCategoryColor}90`]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </BlurView>
+              </View>
+            </>
+          )}
+        </View>
+        
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.tabsWrapper}>
@@ -627,6 +712,20 @@ const styles = StyleSheet.create({
   headerWebFallback: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(18, 18, 18, 0.64)',
+  },
+  progressiveBlurContainer: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: BLUR_SECTION_HEIGHT,
+    zIndex: 5,
+  },
+  blurLayer: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    overflow: 'hidden' as const,
   },
   header: {
     paddingTop: 52,
