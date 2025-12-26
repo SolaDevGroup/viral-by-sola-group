@@ -6,139 +6,228 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Href } from 'expo-router';
-import { ChevronLeft, Search, MoreHorizontal, Check, CheckCheck } from 'lucide-react-native';
+import { 
+  ChevronLeft, 
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal, 
+  Camera,
+  Heart,
+  Play,
+  MessageSquare,
+  MessageCircle,
+  BarChart3,
+  Plus,
+  X,
+} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
+type ConversationType = 'shot' | 'video' | 'message' | 'chat' | 'ad' | 'reply';
 
 interface Conversation {
   id: string;
   name: string;
   username: string;
   avatar: string;
-  lastMessage: string;
+  type: ConversationType;
+  statusText: string;
   timestamp: string;
   unreadCount: number;
-  isOnline: boolean;
+  hasStory: boolean;
   isVerified: boolean;
-  isRead: boolean;
-  isGroup?: boolean;
-  groupMembers?: number;
+  isAd?: boolean;
+}
+
+interface QuickAddUser {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  hasNewVideo: boolean;
+  timestamp: string;
 }
 
 const MOCK_CONVERSATIONS: Conversation[] = [
   {
     id: '1',
-    name: 'Emma Creates',
-    username: 'emma_creates',
+    name: 'Dani',
+    username: 'dani_creates',
     avatar: 'https://i.pravatar.cc/150?img=1',
-    lastMessage: 'Hey! Did you see my new video?',
-    timestamp: '2m',
-    unreadCount: 3,
-    isOnline: true,
-    isVerified: true,
-    isRead: false,
+    type: 'shot',
+    statusText: 'New Shot and chat',
+    timestamp: '45s',
+    unreadCount: 12,
+    hasStory: false,
+    isVerified: false,
   },
   {
     id: '2',
-    name: 'Alex Vibes',
-    username: 'alex_vibes',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    lastMessage: 'The collab was amazing! 🔥',
-    timestamp: '15m',
-    unreadCount: 0,
-    isOnline: true,
+    name: 'Rachel',
+    username: 'rachel_v',
+    avatar: 'https://i.pravatar.cc/150?img=5',
+    type: 'video',
+    statusText: 'New Video',
+    timestamp: '1h',
+    unreadCount: 12,
+    hasStory: true,
     isVerified: false,
-    isRead: true,
   },
   {
     id: '3',
-    name: 'Content Creators Hub',
-    username: '',
-    avatar: 'https://i.pravatar.cc/150?img=20',
-    lastMessage: 'Sarah: Who\'s joining the live tonight?',
-    timestamp: '1h',
+    name: 'Alex',
+    username: 'alex_vibes',
+    avatar: 'https://i.pravatar.cc/150?img=12',
+    type: 'message',
+    statusText: 'New Message',
+    timestamp: '1d',
     unreadCount: 12,
-    isOnline: false,
+    hasStory: false,
     isVerified: false,
-    isRead: false,
-    isGroup: true,
-    groupMembers: 24,
   },
   {
     id: '4',
-    name: 'Marcus Chen',
-    username: 'marcus.chen',
-    avatar: 'https://i.pravatar.cc/150?img=33',
-    lastMessage: 'Thanks for the follow back!',
-    timestamp: '3h',
-    unreadCount: 0,
-    isOnline: false,
-    isVerified: true,
-    isRead: true,
+    name: 'Dani',
+    username: 'dani_art',
+    avatar: 'https://i.pravatar.cc/150?img=9',
+    type: 'chat',
+    statusText: 'Tap to chat',
+    timestamp: '',
+    unreadCount: 12,
+    hasStory: false,
+    isVerified: false,
   },
   {
     id: '5',
-    name: 'Sophie Taylor',
-    username: 'sophiet',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    lastMessage: 'Sent a voice message',
-    timestamp: '5h',
-    unreadCount: 1,
-    isOnline: true,
-    isVerified: false,
-    isRead: false,
+    name: 'Coca Cola',
+    username: 'cocacola',
+    avatar: 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=150',
+    type: 'ad',
+    statusText: 'Tap to see the exclusive Ad',
+    timestamp: '',
+    unreadCount: 12,
+    hasStory: false,
+    isVerified: true,
+    isAd: true,
   },
   {
     id: '6',
-    name: 'Jake Wilson',
-    username: 'jake_w',
-    avatar: 'https://i.pravatar.cc/150?img=8',
-    lastMessage: 'Let me know when you\'re free',
-    timestamp: '1d',
-    unreadCount: 0,
-    isOnline: false,
+    name: 'Rachel',
+    username: 'rachel_style',
+    avatar: 'https://i.pravatar.cc/150?img=20',
+    type: 'reply',
+    statusText: 'Tap to reply',
+    timestamp: '',
+    unreadCount: 12,
+    hasStory: false,
     isVerified: false,
-    isRead: true,
   },
   {
     id: '7',
-    name: 'Mia Rodriguez',
-    username: 'mia.rod',
-    avatar: 'https://i.pravatar.cc/150?img=9',
-    lastMessage: 'That trend is so viral right now 😂',
-    timestamp: '1d',
-    unreadCount: 0,
-    isOnline: false,
-    isVerified: true,
-    isRead: true,
-  },
-  {
-    id: '8',
-    name: 'Dance Squad',
-    username: '',
-    avatar: 'https://i.pravatar.cc/150?img=15',
-    lastMessage: 'Mike: Practice at 6pm?',
-    timestamp: '2d',
-    unreadCount: 0,
-    isOnline: false,
+    name: 'Alex',
+    username: 'alex_m',
+    avatar: 'https://i.pravatar.cc/150?img=33',
+    type: 'chat',
+    statusText: 'Tap to chat',
+    timestamp: '',
+    unreadCount: 12,
+    hasStory: false,
     isVerified: false,
-    isRead: true,
-    isGroup: true,
-    groupMembers: 8,
   },
 ];
 
+const QUICK_ADD_USERS: QuickAddUser[] = [
+  {
+    id: 'q1',
+    name: 'Display Name',
+    username: 'username',
+    avatar: 'https://i.pravatar.cc/150?img=25',
+    hasNewVideo: false,
+    timestamp: '45s',
+  },
+  {
+    id: 'q2',
+    name: 'Rachel',
+    username: 'rachel_new',
+    avatar: 'https://i.pravatar.cc/150?img=26',
+    hasNewVideo: true,
+    timestamp: '1h',
+  },
+  {
+    id: 'q3',
+    name: 'Alex',
+    username: 'alex_new',
+    avatar: 'https://i.pravatar.cc/150?img=27',
+    hasNewVideo: false,
+    timestamp: '1d',
+  },
+  {
+    id: 'q4',
+    name: 'Dani',
+    username: 'dani_new',
+    avatar: 'https://i.pravatar.cc/150?img=28',
+    hasNewVideo: false,
+    timestamp: '',
+  },
+  {
+    id: 'q5',
+    name: 'Rachel',
+    username: 'rachel_2',
+    avatar: 'https://i.pravatar.cc/150?img=29',
+    hasNewVideo: false,
+    timestamp: '',
+  },
+  {
+    id: 'q6',
+    name: 'Alex',
+    username: 'alex_2',
+    avatar: 'https://i.pravatar.cc/150?img=30',
+    hasNewVideo: false,
+    timestamp: '',
+  },
+];
+
+const getTypeColor = (type: ConversationType): string => {
+  switch (type) {
+    case 'shot':
+      return '#EE1045';
+    case 'video':
+      return '#8E1DFE';
+    case 'message':
+      return '#007BFF';
+    case 'ad':
+      return '#EE1045';
+    default:
+      return 'rgba(18, 18, 18, 0.48)';
+  }
+};
+
+const getTypeIcon = (type: ConversationType) => {
+  const color = getTypeColor(type);
+  switch (type) {
+    case 'shot':
+      return <Heart size={18} color={color} fill={color} />;
+    case 'video':
+      return <Play size={18} color={color} fill={color} />;
+    case 'message':
+      return <MessageSquare size={18} color={color} fill={color} />;
+    case 'ad':
+      return <Heart size={18} color={color} fill={color} />;
+    default:
+      return <Heart size={18} color={color} />;
+  }
+};
+
 export default function InboxScreen() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'primary' | 'requests'>('primary');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'requests'>('all');
 
-  const filteredConversations = MOCK_CONVERSATIONS.filter(conv =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const currentUser = {
+    avatar: 'https://i.pravatar.cc/150?img=50',
+    username: 'username',
+  };
 
   const renderConversation = ({ item }: { item: Conversation }) => (
     <TouchableOpacity
@@ -146,336 +235,494 @@ export default function InboxScreen() {
       onPress={() => router.push(`/conversation/${item.id}` as Href)}
       activeOpacity={0.7}
     >
-      <View style={styles.avatarContainer}>
+      <View style={[styles.avatarContainer, item.hasStory && styles.avatarWithStory]}>
         <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        {item.isOnline && <View style={styles.onlineIndicator} />}
       </View>
 
       <View style={styles.conversationContent}>
-        <View style={styles.conversationHeader}>
-          <View style={styles.nameRow}>
-            <Text style={styles.conversationName} numberOfLines={1}>
-              {item.name}
-            </Text>
-            {item.isVerified && (
-              <View style={styles.verifiedBadge}>
-                <Check size={8} color="#007BFF" strokeWidth={3} />
-              </View>
-            )}
-            {item.isGroup && (
-              <Text style={styles.groupBadge}>{item.groupMembers}</Text>
-            )}
-          </View>
-          <Text style={styles.timestamp}>{item.timestamp}</Text>
+        <Text style={styles.conversationName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={styles.statusRow}>
+          {getTypeIcon(item.type)}
+          <Text style={[styles.statusText, { color: getTypeColor(item.type) }]}>
+            {item.statusText}
+          </Text>
+          {item.timestamp ? (
+            <>
+              <View style={styles.dotSeparator} />
+              <Text style={styles.timestamp}>{item.timestamp}</Text>
+            </>
+          ) : null}
         </View>
+      </View>
 
-        <View style={styles.messageRow}>
-          <View style={styles.messageContent}>
-            {item.isRead && !item.isGroup && (
-              <CheckCheck size={14} color="rgba(255, 255, 255, 0.32)" style={styles.readIcon} />
-            )}
-            <Text
-              style={[
-                styles.lastMessage,
-                item.unreadCount > 0 && styles.unreadMessage,
-              ]}
-              numberOfLines={1}
-            >
-              {item.lastMessage}
-            </Text>
-          </View>
-          {item.unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {item.unreadCount > 99 ? '99+' : item.unreadCount}
-              </Text>
-            </View>
-          )}
+      <View style={styles.conversationActions}>
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadCount}>{item.unreadCount}</Text>
         </View>
+        <TouchableOpacity style={styles.cameraButton}>
+          <Camera size={24} color="rgba(18, 18, 18, 0.64)" />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ChevronLeft size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.moreButton}>
-          <MoreHorizontal size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+  const renderQuickAddUser = ({ item }: { item: QuickAddUser }) => (
+    <TouchableOpacity
+      style={styles.quickAddItem}
+      onPress={() => router.push(`/conversation/${item.id}` as Href)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.quickAddAvatarContainer, item.hasNewVideo && styles.avatarWithStory]}>
+        <Image source={{ uri: item.avatar }} style={styles.quickAddAvatar} />
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={18} color="rgba(255, 255, 255, 0.48)" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search messages..."
-            placeholderTextColor="rgba(255, 255, 255, 0.48)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      <View style={styles.quickAddContent}>
+        <Text style={styles.quickAddName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={styles.quickAddInfo}>
+          <Text style={styles.quickAddUsername}>{item.username}</Text>
+          {item.timestamp ? (
+            <>
+              <View style={styles.dotSeparator} />
+              <Text style={styles.quickAddTimestamp}>{item.timestamp}</Text>
+            </>
+          ) : null}
         </View>
       </View>
 
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'primary' && styles.activeTab]}
-          onPress={() => setActiveTab('primary')}
-        >
-          <Text style={[styles.tabText, activeTab === 'primary' && styles.activeTabText]}>
-            Primary
-          </Text>
+      <TouchableOpacity style={styles.addButton}>
+        <Plus size={16} color="#FFFFFF" />
+        <Text style={styles.addButtonText}>Add</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.dismissButton}>
+        <X size={24} color="rgba(18, 18, 18, 0.64)" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const ListHeaderComponent = () => (
+    <>
+      <View style={styles.actionCardsRow}>
+        <TouchableOpacity style={styles.actionCard}>
+          <Camera size={24} color="rgba(18, 18, 18, 0.64)" />
+          <View style={styles.actionCardText}>
+            <Text style={styles.actionCardLabel}>Post a</Text>
+            <Text style={styles.actionCardTitle}>Moment</Text>
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
-          onPress={() => setActiveTab('requests')}
-        >
-          <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
-            Requests
-          </Text>
-          <View style={styles.requestsBadge}>
-            <Text style={styles.requestsCount}>5</Text>
+
+        <TouchableOpacity style={styles.actionCard}>
+          <MessageCircle size={24} color="rgba(18, 18, 18, 0.64)" />
+          <View style={styles.actionCardText}>
+            <Text style={styles.actionCardLabel}>Create a</Text>
+            <Text style={styles.actionCardTitle}>Chat</Text>
           </View>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredConversations}
-        renderItem={renderConversation}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No messages yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Start a conversation with your followers
-            </Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+      <TouchableOpacity 
+        style={styles.insightsRow}
+        onPress={() => router.push('/chat-insights' as Href)}
+      >
+        <BarChart3 size={24} color="rgba(255, 255, 255, 0.64)" />
+        <View style={styles.insightsText}>
+          <Text style={styles.insightsLabel}>Show</Text>
+          <Text style={styles.insightsTitle}>Insights</Text>
+        </View>
+        <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+      </TouchableOpacity>
+    </>
+  );
+
+  const ListFooterComponent = () => (
+    <>
+      <View style={styles.quickAddHeader}>
+        <Text style={styles.quickAddHeaderText}>Quick Add</Text>
+      </View>
+      {QUICK_ADD_USERS.map((user) => (
+        <View key={user.id}>
+          {renderQuickAddUser({ item: user })}
+        </View>
+      ))}
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['rgba(18, 18, 18, 0.64)', 'rgba(18, 18, 18, 0.64)']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.headerBackground}>
+          <SafeAreaView edges={['top']} style={styles.safeHeader}>
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => router.back()}
+              >
+                <ChevronLeft size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.userSelector}>
+                <Image source={{ uri: currentUser.avatar }} style={styles.headerAvatar} />
+                <Text style={styles.headerUsername}>{currentUser.username}</Text>
+                <ChevronDown size={20} color="rgba(255, 255, 255, 0.64)" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.headerButton}>
+                <MoreHorizontal size={20} color="rgba(255, 255, 255, 0.64)" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterTabs}>
+              <TouchableOpacity
+                style={[styles.filterTab, activeFilter === 'all' && styles.filterTabActive]}
+                onPress={() => setActiveFilter('all')}
+              >
+                <Text style={[styles.filterTabText, activeFilter === 'all' && styles.filterTabTextActive]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterTab, activeFilter === 'unread' && styles.filterTabActive]}
+                onPress={() => setActiveFilter('unread')}
+              >
+                <Text style={[styles.filterTabText, activeFilter === 'unread' && styles.filterTabTextActive]}>
+                  Unread
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterTab, activeFilter === 'requests' && styles.filterTabActive]}
+                onPress={() => setActiveFilter('requests')}
+              >
+                <Text style={[styles.filterTabText, activeFilter === 'requests' && styles.filterTabTextActive]}>
+                  Requests
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.contentCard}>
+        <FlatList
+          data={MOCK_CONVERSATIONS}
+          renderItem={renderConversation}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={ListHeaderComponent}
+          ListFooterComponent={ListFooterComponent}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F6F6F6',
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  headerBackground: {
+    backgroundColor: '#014D3A',
+  },
+  safeHeader: {
+    paddingBottom: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingTop: 12,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
+  userSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  headerUsername: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: -0.005,
   },
-  moreButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  searchBar: {
+  filterTabs: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 44,
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 8,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingHorizontal: 12,
+    paddingTop: 12,
     gap: 6,
   },
-  activeTab: {
+  filterTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  filterTabActive: {
     backgroundColor: '#FFFFFF',
   },
-  tabText: {
+  filterTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.64)',
+    color: '#FFFFFF',
+    letterSpacing: -0.005,
+    textTransform: 'capitalize',
   },
-  activeTabText: {
+  filterTabTextActive: {
     color: '#121212',
   },
-  requestsBadge: {
-    backgroundColor: '#EE1045',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-  },
-  requestsCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  contentCard: {
+    flex: 1,
+    marginTop: 156,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 8,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 100,
+  },
+  actionCardsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  actionCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 10,
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+    borderRadius: 12,
+  },
+  actionCardText: {
+    gap: 4,
+  },
+  actionCardLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(18, 18, 18, 0.48)',
+    letterSpacing: -0.02,
+  },
+  actionCardTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#121212',
+    letterSpacing: -0.02,
+  },
+  insightsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#014D3A',
+    gap: 10,
+  },
+  insightsText: {
+    flex: 1,
+    gap: 4,
+  },
+  insightsLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.48)',
+    letterSpacing: -0.02,
+  },
+  insightsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    letterSpacing: -0.02,
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
   },
   avatarContainer: {
-    position: 'relative',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    padding: 4,
+  },
+  avatarWithStory: {
+    borderWidth: 2,
+    borderColor: 'rgba(18, 18, 18, 0.64)',
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#333',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#00D26A',
-    borderWidth: 2,
-    borderColor: '#121212',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   conversationContent: {
     flex: 1,
-    gap: 4,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
+    gap: 6,
   },
   conversationName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    flexShrink: 1,
+    fontWeight: '500',
+    color: '#121212',
+    letterSpacing: -0.5,
+    textTransform: 'capitalize',
   },
-  verifiedBadge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+  statusRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  groupBadge: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.48)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginLeft: 4,
+  statusText: {
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: -0.5,
+  },
+  dotSeparator: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(18, 18, 18, 0.16)',
   },
   timestamp: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.48)',
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  messageContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-  },
-  readIcon: {
-    marginRight: 4,
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.48)',
-    flex: 1,
-  },
-  unreadMessage: {
-    color: '#FFFFFF',
     fontWeight: '500',
+    color: 'rgba(18, 18, 18, 0.48)',
+    letterSpacing: -0.02,
+  },
+  conversationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   unreadBadge: {
-    backgroundColor: '#007BFF',
+    minWidth: 24,
+    height: 24,
     borderRadius: 12,
-    minWidth: 22,
-    height: 22,
+    backgroundColor: '#EE1045',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
   },
   unreadCount: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
-  emptyState: {
-    alignItems: 'center',
+  cameraButton: {
+    width: 24,
+    height: 24,
     justifyContent: 'center',
-    paddingTop: 80,
+    alignItems: 'center',
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
+  quickAddHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,
   },
-  emptySubtitle: {
+  quickAddHeaderText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#121212',
+    letterSpacing: -0.5,
+    textTransform: 'capitalize',
+  },
+  quickAddItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  quickAddAvatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    padding: 4,
+  },
+  quickAddAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  quickAddContent: {
+    flex: 1,
+    gap: 4,
+  },
+  quickAddName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#121212',
+    letterSpacing: -0.5,
+    textTransform: 'capitalize',
+  },
+  quickAddInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  quickAddUsername: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(18, 18, 18, 0.48)',
+    letterSpacing: -0.02,
+  },
+  quickAddTimestamp: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(18, 18, 18, 0.48)',
+    letterSpacing: -0.02,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingLeft: 8,
+    paddingRight: 12,
+    gap: 2,
+    backgroundColor: '#014D3A',
+    borderRadius: 100,
+  },
+  addButtonText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.48)',
-    textAlign: 'center',
+    fontWeight: '500',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  dismissButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
