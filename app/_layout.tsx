@@ -25,6 +25,7 @@ export default function RootLayout() {
               <Stack.Screen name="live-feed" />
               <Stack.Screen name="qr-code" />
               <Stack.Screen name="notifications" />
+              <Stack.Screen name="inbox" />
               <Stack.Screen name="insights" />
               <Stack.Screen name="chat-insights" />
               <Stack.Screen name="settings" />
