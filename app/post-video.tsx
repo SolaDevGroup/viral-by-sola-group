@@ -1,42 +1,88 @@
-import { StyleSheet, View, TouchableOpacity, Text, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Text, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert, Switch, Image } from "react-native";
 import { useLocalSearchParams, router, Href } from "expo-router";
 import { useState } from "react";
 import { Video, ResizeMode } from "expo-av";
-import { X, Hash, Globe, Users, Lock } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import { ChevronLeft, ChevronRight, MapPin, Info, Check } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/contexts/AppContext";
 
-const CATEGORIES = [
+const TOPICS = [
+  'Sports',
   'Technology',
   'Politics',
-  'Sports',
   'Music',
   'Fashion',
   'Entertainment',
   'Gaming',
   'Food',
-  'Health'
+  'Health',
+  'Travel',
+  'Art',
+  'Education'
 ];
 
-type PrivacyOption = 'public' | 'following' | 'subscribers';
+const AGE_RATINGS = [
+  'No Age Restriction',
+  '13+',
+  '16+',
+  '18+'
+];
+
+const VISIBILITY_OPTIONS = [
+  'Public',
+  'Followers Only',
+  'Subscribers Only',
+  'Private'
+];
+
+type Collaborator = {
+  id: string;
+  name: string;
+  verified: boolean;
+};
+
+type Sponsor = {
+  id: string;
+  name: string;
+  verified: boolean;
+};
 
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ videoUri: string; mode: string; startTime: string; endTime: string }>();
-  const { videoUri, mode } = params;
+  const params = useLocalSearchParams<{ videoUri: string; mode: string; startTime: string; endTime: string; thumbnailUri?: string }>();
+  const { videoUri, mode, thumbnailUri } = params;
   const { user } = useApp();
   
   const [caption, setCaption] = useState('');
   const maxCaptionLength = user?.isPro ? 2000 : 500;
-  const [tags, setTags] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Technology');
-  const [privacy, setPrivacy] = useState<PrivacyOption>('public');
+  const [selectedRatio, setSelectedRatio] = useState<'9:16' | '16:9'>('9:16');
+  const [location] = useState('Geneva, Switzerland');
+  const [topic, setTopic] = useState('Sports');
+  const [tags] = useState('#David Beckham, #Adidas, #Football');
+  const [collaborators] = useState<Collaborator[]>([
+    { id: '1', name: 'David Beckham', verified: true },
+    { id: '2', name: 'Jude Bellingham', verified: true },
+  ]);
+  const [sponsors] = useState<Sponsor[]>([
+    { id: '1', name: 'Adidas', verified: true },
+  ]);
+  const [containsAI, setContainsAI] = useState(true);
+  const [canLike, setCanLike] = useState(true);
+  const [canComment, setCanComment] = useState(true);
+  const [canShare, setCanShare] = useState(true);
+  const [ageRating, setAgeRating] = useState('No Age Restriction');
+  const [visibility, setVisibility] = useState('Public');
+  const [confirmTOS, setConfirmTOS] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
 
   const handlePost = async () => {
     if (!caption.trim()) {
       Alert.alert('Caption Required', 'Please add a caption for your video');
+      return;
+    }
+
+    if (!confirmTOS) {
+      Alert.alert('Terms of Service', 'Please confirm that your post is within our Terms of Service');
       return;
     }
 
@@ -47,9 +93,17 @@ export default function PostVideoScreen() {
         videoUri,
         mode,
         caption,
-        tags: tags.split(' ').filter(tag => tag.startsWith('#')),
-        category: selectedCategory,
-        privacy,
+        location,
+        topic,
+        tags,
+        collaborators,
+        sponsors,
+        containsAI,
+        canLike,
+        canComment,
+        canShare,
+        ageRating,
+        visibility,
         userId: user?.id,
       });
 
@@ -57,7 +111,7 @@ export default function PostVideoScreen() {
 
       Alert.alert(
         'Success!',
-        'Your video has been posted',
+        'Your reel has been published',
         [
           {
             text: 'View Profile',
@@ -83,307 +137,486 @@ export default function PostVideoScreen() {
     }
   };
 
-  const privacyOptions: { value: PrivacyOption; label: string; icon: any }[] = [
-    { value: 'public', label: 'Public', icon: Globe },
-    { value: 'following', label: 'Following', icon: Users },
-    { value: 'subscribers', label: 'Subscribers', icon: Lock },
-  ];
+  const renderVerifiedBadge = () => (
+    <View style={styles.verifiedBadge}>
+      <Check size={8} color="#fff" strokeWidth={3} />
+    </View>
+  );
+
+  const renderToggleRow = (label: string, value: boolean, onValueChange: (val: boolean) => void) => (
+    <View style={styles.fieldRow}>
+      <View style={styles.fieldContent}>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        <Text style={styles.fieldValue}>{value ? 'Yes' : 'No'}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: 'rgba(255, 255, 255, 0.16)', true: '#37B874' }}
+        thumbColor="#FFFFFF"
+        ios_backgroundColor="rgba(255, 255, 255, 0.16)"
+      />
+    </View>
+  );
+
+  const renderSelectRow = (label: string, value: string, onPress: () => void) => (
+    <TouchableOpacity style={styles.fieldRow} onPress={onPress}>
+      <View style={styles.fieldContent}>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        <Text style={[styles.fieldValue, !value && styles.fieldValuePlaceholder]}>
+          {value || 'Select...'}
+        </Text>
+      </View>
+      <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+    </TouchableOpacity>
+  );
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <X color={Colors.text} size={28} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post {mode === 'short' ? 'Short' : mode === 'selfie' ? 'Selfie' : 'Live'}</Text>
-        <TouchableOpacity 
-          onPress={handlePost}
-          disabled={isPosting}
-          style={styles.postButton}
-        >
-          <Text style={styles.postButtonText}>{isPosting ? 'Posting...' : 'Post'}</Text>
-        </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="rgba(255, 255, 255, 0.64)" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Publish A Reel</Text>
+        </View>
       </View>
 
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 20 }]}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.videoPreview}>
-          {videoUri && (
-            <Video
-              source={{ uri: videoUri }}
-              style={styles.video}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay={false}
-              isLooping
-            />
-          )}
-          <View style={styles.videoOverlay}>
-            <Text style={styles.videoLabel}>Preview</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Caption</Text>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="Write a caption..."
-            placeholderTextColor={Colors.textSecondary}
-            value={caption}
-            onChangeText={setCaption}
-            multiline
-            maxLength={maxCaptionLength}
-          />
-          <Text style={styles.charCount}>{caption.length}/{maxCaptionLength}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Hash color={Colors.primary} size={20} />
-            <Text style={styles.sectionLabel}>Tags</Text>
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="#tag1 #tag2 #tag3"
-            placeholderTextColor={Colors.textSecondary}
-            value={tags}
-            onChangeText={setTags}
-          />
-          <Text style={styles.hint}>Separate tags with spaces, e.g., #dance #viral #fyp</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Category</Text>
-          <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryChip,
-                  selectedCategory === category && styles.categoryChipSelected
-                ]}
-                onPress={() => setSelectedCategory(category)}
-              >
-                <Text style={[
-                  styles.categoryText,
-                  selectedCategory === category && styles.categoryTextSelected
-                ]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Audience</Text>
-          <View style={styles.dropdownContainer}>
-            {privacyOptions.map(({ value, label, icon: Icon }) => (
-              <TouchableOpacity
-                key={value}
-                style={[
-                  styles.dropdownOption,
-                  privacy === value && styles.dropdownOptionSelected
-                ]}
-                onPress={() => setPrivacy(value)}
-              >
-                <View style={styles.dropdownOptionLeft}>
-                  <Icon 
-                    color={privacy === value ? Colors.primary : Colors.text} 
-                    size={20} 
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.previewContainer}>
+            <View style={styles.previewWrapper}>
+              <View style={styles.previewInner}>
+                {videoUri ? (
+                  <Video
+                    source={{ uri: videoUri }}
+                    style={styles.previewVideo}
+                    resizeMode={ResizeMode.COVER}
+                    shouldPlay={false}
+                    isMuted
                   />
-                  <Text style={[
-                    styles.dropdownOptionText,
-                    privacy === value && styles.dropdownOptionTextSelected
-                  ]}>
-                    {label}
-                  </Text>
-                </View>
-                {privacy === value && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
+                ) : thumbnailUri ? (
+                  <Image source={{ uri: thumbnailUri }} style={styles.previewVideo} />
+                ) : (
+                  <View style={styles.previewPlaceholder} />
                 )}
-              </TouchableOpacity>
-            ))}
+                <View style={styles.previewOverlay}>
+                  <Text style={styles.previewLabel}>Preview</Text>
+                </View>
+              </View>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          <View style={styles.ratioSelector}>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '9:16' && styles.ratioButtonActive]}
+              onPress={() => setSelectedRatio('9:16')}
+            >
+              <Text style={[styles.ratioText, selectedRatio === '9:16' && styles.ratioTextActive]}>
+                9:16 ratio
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '16:9' && styles.ratioButtonActive]}
+              onPress={() => setSelectedRatio('16:9')}
+            >
+              <Text style={[styles.ratioText, selectedRatio === '16:9' && styles.ratioTextActive]}>
+                16:9 ratio
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.captionSection}>
+            <View style={styles.captionBox}>
+              <Text style={styles.captionLabel}>WHAT&apos;S HAPPENING</Text>
+              <TextInput
+                style={styles.captionInput}
+                placeholder="Write your caption here..."
+                placeholderTextColor="rgba(255, 255, 255, 0.48)"
+                value={caption}
+                onChangeText={setCaption}
+                multiline
+                maxLength={maxCaptionLength}
+              />
+            </View>
+            <View style={styles.charCountRow}>
+              <Info size={12} color="rgba(255, 255, 255, 0.64)" />
+              <Text style={styles.charCountText}>{caption.length}/{maxCaptionLength} characters.</Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.fieldsSection}>
+            <TouchableOpacity style={styles.fieldRow}>
+              <View style={styles.fieldContent}>
+                <Text style={styles.fieldLabel}>LOCATION</Text>
+                <View style={styles.locationRow}>
+                  <MapPin size={16} color="#007BFF" />
+                  <Text style={styles.fieldValue}>{location}</Text>
+                </View>
+              </View>
+              <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+            </TouchableOpacity>
+
+            {renderSelectRow('TOPIC', topic, () => {
+              Alert.alert('Select Topic', '', TOPICS.map(t => ({
+                text: t,
+                onPress: () => setTopic(t)
+              })));
+            })}
+
+            <View style={styles.fieldWithHelper}>
+              <TouchableOpacity style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>ADD TAGS</Text>
+                  <Text style={styles.fieldValue}>{tags}</Text>
+                </View>
+                <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+              </TouchableOpacity>
+              <View style={styles.helperRow}>
+                <Info size={12} color="rgba(255, 255, 255, 0.64)" />
+                <Text style={styles.helperText}>Helps you get more reach.</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldWithHelper}>
+              <TouchableOpacity style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>IN COLLABORATION WITH</Text>
+                  <View style={styles.collaboratorsRow}>
+                    {collaborators.map((collab, index) => (
+                      <View key={collab.id} style={styles.collaboratorItem}>
+                        <Text style={styles.fieldValue}>
+                          {index > 0 ? ', ' : ''}{collab.name}
+                        </Text>
+                        {collab.verified && renderVerifiedBadge()}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+              </TouchableOpacity>
+              <View style={styles.helperRow}>
+                <Info size={12} color="rgba(255, 255, 255, 0.64)" />
+                <Text style={styles.helperText}>Person working together on the same project or content.</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldWithHelper}>
+              <TouchableOpacity style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>SPONSORED BY</Text>
+                  <View style={styles.collaboratorsRow}>
+                    {sponsors.map((sponsor) => (
+                      <View key={sponsor.id} style={styles.collaboratorItem}>
+                        <Text style={styles.fieldValue}>{sponsor.name}</Text>
+                        {sponsor.verified && renderVerifiedBadge()}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
+              </TouchableOpacity>
+              <View style={styles.helperRow}>
+                <Info size={12} color="rgba(255, 255, 255, 0.64)" />
+                <Text style={styles.helperText}>Organization supporting financially or with resources in exchange for promotion.</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.togglesSection}>
+            {renderToggleRow('DOES IT CONTAIN AI?', containsAI, setContainsAI)}
+            {renderToggleRow('CAN LIKE?', canLike, setCanLike)}
+            {renderToggleRow('CAN COMMENT?', canComment, setCanComment)}
+            {renderToggleRow('CAN SHARE?', canShare, setCanShare)}
+
+            {renderSelectRow('AGE RATING', ageRating, () => {
+              Alert.alert('Select Age Rating', '', AGE_RATINGS.map(r => ({
+                text: r,
+                onPress: () => setAgeRating(r)
+              })));
+            })}
+
+            {renderSelectRow('AVAILABLE TO', visibility, () => {
+              Alert.alert('Select Visibility', '', VISIBILITY_OPTIONS.map(v => ({
+                text: v,
+                onPress: () => setVisibility(v)
+              })));
+            })}
+          </View>
+
+          <View style={styles.divider} />
+
+          {renderToggleRow('I HEREBY CONFIRM THE POST IS WITHIN TOS', confirmTOS, setConfirmTOS)}
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity 
+          style={[styles.publishButton, isPosting && styles.publishButtonDisabled]}
+          onPress={handlePost}
+          disabled={isPosting}
+        >
+          <Text style={styles.publishButtonText}>
+            {isPosting ? 'Publishing...' : 'Publish'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#121212',
   },
   header: {
+    backgroundColor: 'rgba(18, 18, 18, 0.01)',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    height: 40,
+    gap: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: Colors.text,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
-  postButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-  },
-  postButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600' as const,
-  },
-  content: {
+  keyboardView: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 20,
-    gap: 24,
+  scrollView: {
+    flex: 1,
   },
-  videoPreview: {
-    width: 120,
-    height: 200,
+  scrollContent: {
+    paddingHorizontal: 12,
+    paddingTop: 16,
+  },
+  previewContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  previewWrapper: {
+    width: 124,
+    height: 214,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    padding: 4,
+  },
+  previewInner: {
+    flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: Colors.surface,
-    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
-  video: {
+  previewVideo: {
     width: '100%',
     height: '100%',
   },
-  videoOverlay: {
+  previewPlaceholder: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  previewOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  videoLabel: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600' as const,
-    textAlign: 'center',
-  },
-  section: {
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
+    paddingVertical: 16,
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: 'rgba(18, 18, 18, 0.16)',
   },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: Colors.text,
+  previewLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  ratioSelector: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+    marginBottom: 16,
+  },
+  ratioButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  ratioButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  ratioText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  ratioTextActive: {
+    color: '#121212',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginVertical: 16,
+  },
+  captionSection: {
+    gap: 6,
+  },
+  captionBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 160,
+    gap: 16,
+  },
+  captionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.64)',
+    textTransform: 'uppercase',
   },
   captionInput: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: Colors.text,
-    minHeight: 100,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    lineHeight: 21,
+    flex: 1,
     textAlignVertical: 'top',
   },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: Colors.text,
-  },
-  charCount: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'right',
-  },
-  hint: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  categoriesGrid: {
+  charCountRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 4,
+  },
+  charCountText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.64)',
+    letterSpacing: -0.3,
+  },
+  fieldsSection: {
     gap: 8,
   },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryChipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  categoryText: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  categoryTextSelected: {
-    color: '#fff',
-  },
-  dropdownContainer: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  dropdownOption: {
+  fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 56,
   },
-  dropdownOptionSelected: {
-    backgroundColor: 'rgba(18, 255, 170, 0.08)',
+  fieldContent: {
+    flex: 1,
+    gap: 10,
   },
-  dropdownOptionLeft: {
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.64)',
+    textTransform: 'uppercase',
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  fieldValuePlaceholder: {
+    color: 'rgba(255, 255, 255, 0.48)',
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
   },
-  dropdownOptionText: {
-    fontSize: 15,
-    fontWeight: '500' as const,
-    color: Colors.text,
+  fieldWithHelper: {
+    gap: 6,
   },
-  dropdownOptionTextSelected: {
-    color: Colors.primary,
-    fontWeight: '600' as const,
+  helperRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 4,
   },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
+  helperText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.64)',
+    letterSpacing: -0.3,
+    flex: 1,
+  },
+  collaboratorsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  collaboratorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  verifiedBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#007BFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkmarkText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: '#fff',
+  togglesSection: {
+    gap: 8,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#121212',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  publishButton: {
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  publishButtonDisabled: {
+    opacity: 0.6,
+  },
+  publishButtonText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#121212',
   },
 });
