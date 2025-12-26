@@ -12,7 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { MoreVertical, Eye, Bookmark, MessageCircle, Heart, Volume2, HandHeart, Lock, VolumeX, ArrowUpRight, Crown, MapPin } from 'lucide-react-native';
+import { MoreVertical, Eye, Bookmark, MessageCircle, Heart, Volume2, HandHeart, Lock, VolumeX, ArrowUpRight, Crown, MapPin, Sparkles } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -483,47 +483,34 @@ export default function ShortCard({
                   <Text key={i} style={styles.tag}>#{tag}</Text>
                 ))}
               </View>
+              {short.containsAI && (
+                <View style={styles.aiChip}>
+                  <Sparkles size={10} color="rgba(255, 255, 255, 0.64)" />
+                  <Text style={styles.aiChipText}>Contains AI</Text>
+                </View>
+              )}
               {short.location && (
                 <View style={styles.locationRow}>
-                  <MapPin size={12} color="#FFFFFF" />
+                  <MapPin size={12} color="rgba(255, 255, 255, 0.64)" />
                   <Text style={styles.locationText}>{short.location}</Text>
                 </View>
               )}
               <View style={styles.postedByRow}>
                 <Image 
-                  source={{ uri: short.user.avatar || 'https://i.pravatar.cc/150' }} 
+                  source={{ uri: short.likedBy?.user?.avatar || short.user.avatar || 'https://i.pravatar.cc/150' }} 
                   style={styles.postedByAvatar} 
                 />
                 <View style={styles.postedByTextRow}>
-                  <Text style={styles.postedByLabel}>Posted by </Text>
-                  <Text style={styles.postedByUsername}>@{short.user.username}</Text>
-                  <Text style={styles.postedByLabel}> on </Text>
-                  <Text style={styles.postedByChannel}>@{short.channel || 'main'}</Text>
+                  <Text style={styles.postedByLabel}>Liked by </Text>
+                  <Text style={styles.postedByUsername}>@{short.likedBy?.user?.username || short.user.username}</Text>
+                  {(short.likedBy?.othersCount || likeCount > 1) && (
+                    <>
+                      <Text style={styles.postedByLabel}> & </Text>
+                      <Text style={styles.postedByUsername}>{formatCount(short.likedBy?.othersCount || likeCount - 1)} others</Text>
+                    </>
+                  )}
                 </View>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickSaveButton}
-              onPress={handleSave}
-              activeOpacity={0.7}
-            >
-              {Platform.OS !== 'web' ? (
-                <BlurView intensity={8} tint="dark" style={styles.quickSaveBtnBlur}>
-                  <Bookmark 
-                    color="#FFFFFF" 
-                    fill={isSaved ? "#FFFFFF" : "transparent"}
-                    size={16} 
-                  />
-                </BlurView>
-              ) : (
-                <View style={styles.quickSaveBtnInner}>
-                  <Bookmark 
-                    color="#FFFFFF" 
-                    fill={isSaved ? "#FFFFFF" : "transparent"}
-                    size={16} 
-                  />
-                </View>
-              )}
             </TouchableOpacity>
           </View>
 
@@ -1027,6 +1014,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.64)',
     lineHeight: 12,
   },
+  aiChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    height: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 4,
+    gap: 2,
+  },
+  aiChipText: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: 'rgba(255, 255, 255, 0.64)',
+    lineHeight: 12,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1070,24 +1075,6 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: 'rgba(255, 255, 255, 0.64)',
     lineHeight: 12,
-  },
-  quickSaveButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 100,
-    overflow: 'hidden',
-  },
-  quickSaveBtnBlur: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickSaveBtnInner: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   soundButtonRow: {
     flexDirection: 'row',

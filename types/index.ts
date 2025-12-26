@@ -59,6 +59,11 @@ export interface Short {
   adMinViewTime?: number;
   adBrand?: string;
   adCtaText?: string;
+  containsAI?: boolean;
+  likedBy?: {
+    user: User;
+    othersCount: number;
+  };
 }
 
 export interface Story {
