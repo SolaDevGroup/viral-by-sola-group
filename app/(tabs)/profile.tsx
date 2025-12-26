@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, Animated, Modal, TextInput, KeyboardAvoidingView, Platform, NativeScrollEvent, NativeSyntheticEvent, TouchableWithoutFeedback, ScrollView, Alert } from "react-native";
 import { useState, useRef, useCallback } from "react";
 import { Stack, router, Href } from "expo-router";
-import { Home, Eye, Link2, DollarSign, ChevronRight, ArrowUpDown, Share2, Edit3, BadgeCheck, X, Check, Camera, Lock, Users, Globe, Megaphone, Info, SlidersHorizontal, UserPlus, Star, Palette, Sun, Moon, ImageIcon, Video as VideoIcon } from "lucide-react-native";
+import { Home, Eye, Link2, DollarSign, ChevronRight, ArrowUpDown, Share2, Edit3, BadgeCheck, X, Check, Camera, Lock, Users, Globe, Megaphone, Info, SlidersHorizontal, UserPlus, Star, Palette, Sun, Moon, ImageIcon, Video as VideoIcon, Volume2, VolumeX, Trophy } from "lucide-react-native";
 import { Video, ResizeMode } from 'expo-av';
 import { useApp } from "@/contexts/AppContext";
 import { MOCK_SHORTS } from "@/constants/mockData";
@@ -46,6 +46,10 @@ export default function ProfileScreen() {
   const [showBannerPickerModal, setShowBannerPickerModal] = useState(false);
   const [customBanner, setCustomBanner] = useState<string | null>(null);
   const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
+  const [isBannerMuted, setIsBannerMuted] = useState(true);
+  
+  const userWorldRank = 42;
+  const isTop99Percentile = userWorldRank <= 100;
   
   const getColorWithOpacity = (color: string, opacity: number) => {
     const hex = color.replace('#', '');
@@ -223,7 +227,7 @@ export default function ProfileScreen() {
                 resizeMode={ResizeMode.COVER}
                 shouldPlay={true}
                 isLooping={true}
-                isMuted={true}
+                isMuted={isBannerMuted}
                 useNativeControls={false}
               />
             ) : (
@@ -247,6 +251,22 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.bannerTopRight}>
+              {bannerType === 'video' && customBanner && (
+                <TouchableOpacity 
+                  style={styles.bannerIconBtn} 
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setIsBannerMuted(!isBannerMuted);
+                  }}
+                >
+                  <BlurView intensity={20} tint="light" style={styles.bannerIconBlur} />
+                  {isBannerMuted ? (
+                    <VolumeX size={20} color="#fff" strokeWidth={2} />
+                  ) : (
+                    <Volume2 size={20} color="#fff" strokeWidth={2} />
+                  )}
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.bannerIconBtn} onPress={() => router.push('/insights' as Href)}>
                 <BlurView intensity={20} tint="light" style={styles.bannerIconBlur} />
                 <Info size={20} color="#fff" strokeWidth={2} />
@@ -257,6 +277,19 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {isTop99Percentile && (
+            <View style={styles.rankBadgeContainer}>
+              <BlurView intensity={20} tint="light" style={styles.rankBadgeBlur} />
+              <View style={styles.rankBadgeContent}>
+                <View style={styles.rankIconContainer}>
+                  <Trophy size={14} color="#FFD700" strokeWidth={2.5} fill="#FFD700" />
+                </View>
+                <Text style={styles.rankBadgeText}>#{userWorldRank}</Text>
+                <Text style={styles.rankBadgeLabel}>Worldwide</Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.bannerBottomBar}>
             <LinearGradient
@@ -1534,6 +1567,49 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  rankBadgeContainer: {
+    position: 'absolute',
+    bottom: 90,
+    left: 12,
+    borderRadius: 100,
+    overflow: 'hidden',
+    zIndex: 20,
+  },
+  rankBadgeBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.48)',
+  },
+  rankBadgeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  rankIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankBadgeText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#FFD700',
+    letterSpacing: -0.28,
+  },
+  rankBadgeLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: -0.24,
   },
   bannerBottomBar: {
     position: 'absolute',
