@@ -18,9 +18,15 @@ import { Bell, Inbox, Compass, Play, ArrowDown, Star, Users, Rss, Plus } from 'l
 import CommentsSheet from '@/components/CommentsSheet';
 import ShortCard from '@/components/ShortCard';
 import NewFollowerAlert from '@/components/NewFollowerAlert';
-import { MOCK_SHORTS, MOCK_STORIES } from '@/constants/mockData';
+import SuggestedProfilesCard from '@/components/SuggestedProfilesCard';
+import { MOCK_SHORTS, MOCK_STORIES, MOCK_SUGGESTED_PROFILES } from '@/constants/mockData';
 import type { Short } from '@/types';
+import type { SuggestedProfile } from '@/components/SuggestedProfilesCard';
 import { useApp } from '@/contexts/AppContext';
+
+type FeedItem = 
+  | { type: 'short'; data: Short; index: number }
+  | { type: 'suggestions'; data: SuggestedProfile[]; index: number };
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = 136;
@@ -62,6 +68,7 @@ export default function HomeScreen() {
     avatar: string;
     isVerified: boolean;
   } | null>(null);
+  const [suggestedProfiles, setSuggestedProfiles] = useState<SuggestedProfile[]>(MOCK_SUGGESTED_PROFILES);
   const feedSelectorOpacity = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
   const momentsTranslateY = useRef(new Animated.Value(0)).current;
@@ -247,13 +254,38 @@ export default function HomeScreen() {
     };
   };
 
-  const snapOffsets = MOCK_SHORTS.map((_, index) => {
+  const feedData = useMemo((): FeedItem[] => {
+    const items: FeedItem[] = [];
+    let shortIndex = 0;
+    
+    MOCK_SHORTS.forEach((short, i) => {
+      items.push({ type: 'short', data: short, index: shortIndex });
+      shortIndex++;
+      
+      if ((i + 1) % 12 === 0 && i < MOCK_SHORTS.length - 1) {
+        const startIdx = ((i + 1) / 12 - 1) * 4 % suggestedProfiles.length;
+        const profiles = [
+          ...suggestedProfiles.slice(startIdx, startIdx + 4),
+          ...suggestedProfiles.slice(0, Math.max(0, 4 - (suggestedProfiles.length - startIdx)))
+        ].slice(0, 4);
+        items.push({ type: 'suggestions', data: profiles, index: shortIndex });
+        shortIndex++;
+      }
+    });
+    
+    return items;
+  }, [suggestedProfiles]);
+
+  const handleShuffleSuggestions = () => {
+    const shuffled = [...suggestedProfiles].sort(() => Math.random() - 0.5);
+    setSuggestedProfiles(shuffled);
+  };
+
+  const snapOffsets = feedData.map((_, index) => {
     let offset = 0;
     for (let i = 0; i < index; i++) {
       offset += getCardHeight(i);
     }
-    // For cards after the first one, add MOMENTS_HEIGHT to account for
-    // moments section being hidden, so cards snap to 136px below top edge
     return index === 0 ? offset : offset + MOMENTS_HEIGHT;
   });
 
@@ -261,7 +293,7 @@ export default function HomeScreen() {
     router.push(`/video-feed?index=${index}` as Href);
   };
 
-  const renderShort = ({ item, index }: { item: Short; index: number }) => {
+  const renderFeedItem = ({ item, index }: { item: FeedItem; index: number }) => {
     const isActive = index === currentIndex && isScreenFocused;
     
     const isTabBarVisible = index === 0 ? true : isTabBarVisibleState;
@@ -275,9 +307,19 @@ export default function HomeScreen() {
       cardHeight -= TAB_BAR_HEIGHT;
     }
 
+    if (item.type === 'suggestions') {
+      return (
+        <SuggestedProfilesCard
+          profiles={item.data}
+          height={cardHeight}
+          onShuffle={handleShuffleSuggestions}
+        />
+      );
+    }
+
     return (
       <ShortCard
-        short={item}
+        short={item.data}
         isActive={isActive}
         height={cardHeight}
         showFullUI={false}
@@ -287,7 +329,7 @@ export default function HomeScreen() {
         categoryColor={selectedCategoryColor}
         onPress={() => handleCardPress(index)}
         onCommentPress={() => {
-          setSelectedShortId(item.id);
+          setSelectedShortId(item.data.id);
           setCommentsSheetVisible(true);
         }}
       />
@@ -557,9 +599,9 @@ export default function HomeScreen() {
 
       <FlatList
         ref={flatListRef}
-        data={MOCK_SHORTS}
-        renderItem={renderShort}
-        keyExtractor={(item) => item.id}
+        data={feedData}
+        renderItem={renderFeedItem}
+        keyExtractor={(item) => item.type === 'short' ? item.data.id : `suggestions-${item.index}`}
         showsVerticalScrollIndicator={false}
         snapToOffsets={snapOffsets}
         decelerationRate="fast"
