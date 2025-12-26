@@ -1,39 +1,10 @@
 import { StyleSheet, View, TouchableOpacity, Text, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert, Switch, Image } from "react-native";
-import { useLocalSearchParams, router, Href } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, router, Href, useFocusEffect } from "expo-router";
+import { useState, useCallback } from "react";
 import { Video, ResizeMode } from "expo-av";
 import { ChevronLeft, ChevronRight, MapPin, Info, Check } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/contexts/AppContext";
-
-const TOPICS = [
-  'Sports',
-  'Technology',
-  'Politics',
-  'Music',
-  'Fashion',
-  'Entertainment',
-  'Gaming',
-  'Food',
-  'Health',
-  'Travel',
-  'Art',
-  'Education'
-];
-
-const AGE_RATINGS = [
-  'No Age Restriction',
-  '13+',
-  '16+',
-  '18+'
-];
-
-const VISIBILITY_OPTIONS = [
-  'Public',
-  'Followers Only',
-  'Subscribers Only',
-  'Private'
-];
 
 type Collaborator = {
   id: string;
@@ -49,21 +20,34 @@ type Sponsor = {
 
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ videoUri: string; mode: string; startTime: string; endTime: string; thumbnailUri?: string }>();
+  const params = useLocalSearchParams<{ 
+    videoUri: string; 
+    mode: string; 
+    startTime: string; 
+    endTime: string; 
+    thumbnailUri?: string;
+    selectedLocation?: string;
+    selectedTopic?: string;
+    selectedTags?: string;
+    selectedCollaborators?: string;
+    selectedSponsors?: string;
+    selectedVisibility?: string;
+    selectedAgeRating?: string;
+  }>();
   const { videoUri, mode, thumbnailUri } = params;
   const { user } = useApp();
   
   const [caption, setCaption] = useState('');
   const maxCaptionLength = user?.isPro ? 2000 : 500;
   const [selectedRatio, setSelectedRatio] = useState<'9:16' | '16:9'>('9:16');
-  const [location] = useState('Geneva, Switzerland');
+  const [location, setLocation] = useState('Geneva, Switzerland');
   const [topic, setTopic] = useState('Sports');
-  const [tags] = useState('#David Beckham, #Adidas, #Football');
-  const [collaborators] = useState<Collaborator[]>([
+  const [tags, setTags] = useState('#David Beckham, #Adidas, #Football');
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([
     { id: '1', name: 'David Beckham', verified: true },
     { id: '2', name: 'Jude Bellingham', verified: true },
   ]);
-  const [sponsors] = useState<Sponsor[]>([
+  const [sponsors, setSponsors] = useState<Sponsor[]>([
     { id: '1', name: 'Adidas', verified: true },
   ]);
   const [containsAI, setContainsAI] = useState(true);
@@ -74,6 +58,40 @@ export default function PostVideoScreen() {
   const [visibility, setVisibility] = useState('Public');
   const [confirmTOS, setConfirmTOS] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const selectedLocation = params.selectedLocation as string | undefined;
+      const selectedTopic = params.selectedTopic as string | undefined;
+      const selectedTags = params.selectedTags as string | undefined;
+      const selectedCollaborators = params.selectedCollaborators as string | undefined;
+      const selectedSponsors = params.selectedSponsors as string | undefined;
+      const selectedVisibility = params.selectedVisibility as string | undefined;
+      const selectedAgeRating = params.selectedAgeRating as string | undefined;
+
+      if (selectedLocation) setLocation(selectedLocation);
+      if (selectedTopic) setTopic(selectedTopic);
+      if (selectedTags) setTags(selectedTags);
+      if (selectedCollaborators) {
+        try {
+          const parsed = JSON.parse(selectedCollaborators);
+          setCollaborators(parsed.map((c: any) => ({ id: c.id, name: c.name, verified: c.verified })));
+        } catch (e) {
+          console.log('Error parsing collaborators:', e);
+        }
+      }
+      if (selectedSponsors) {
+        try {
+          const parsed = JSON.parse(selectedSponsors);
+          setSponsors(parsed.map((s: any) => ({ id: s.id, name: s.name, verified: s.verified })));
+        } catch (e) {
+          console.log('Error parsing sponsors:', e);
+        }
+      }
+      if (selectedVisibility) setVisibility(selectedVisibility);
+      if (selectedAgeRating) setAgeRating(selectedAgeRating);
+    }, [params])
+  );
 
   const handlePost = async () => {
     if (!caption.trim()) {
@@ -257,7 +275,10 @@ export default function PostVideoScreen() {
           <View style={styles.divider} />
 
           <View style={styles.fieldsSection}>
-            <TouchableOpacity style={styles.fieldRow}>
+            <TouchableOpacity 
+              style={styles.fieldRow}
+              onPress={() => router.push(`/post-settings/select-location?currentLocation=${encodeURIComponent(location)}` as Href)}
+            >
               <View style={styles.fieldContent}>
                 <Text style={styles.fieldLabel}>LOCATION</Text>
                 <View style={styles.locationRow}>
@@ -269,14 +290,14 @@ export default function PostVideoScreen() {
             </TouchableOpacity>
 
             {renderSelectRow('TOPIC', topic, () => {
-              Alert.alert('Select Topic', '', TOPICS.map(t => ({
-                text: t,
-                onPress: () => setTopic(t)
-              })));
+              router.push(`/post-settings/select-topic?currentTopic=${encodeURIComponent(topic)}` as Href);
             })}
 
             <View style={styles.fieldWithHelper}>
-              <TouchableOpacity style={styles.fieldRow}>
+              <TouchableOpacity 
+                style={styles.fieldRow}
+                onPress={() => router.push(`/post-settings/add-tags?currentTags=${encodeURIComponent(tags)}` as Href)}
+              >
                 <View style={styles.fieldContent}>
                   <Text style={styles.fieldLabel}>ADD TAGS</Text>
                   <Text style={styles.fieldValue}>{tags}</Text>
@@ -290,18 +311,23 @@ export default function PostVideoScreen() {
             </View>
 
             <View style={styles.fieldWithHelper}>
-              <TouchableOpacity style={styles.fieldRow}>
+              <TouchableOpacity 
+                style={styles.fieldRow}
+                onPress={() => router.push(`/post-settings/select-collaborators?currentCollaborators=${encodeURIComponent(JSON.stringify(collaborators))}` as Href)}
+              >
                 <View style={styles.fieldContent}>
                   <Text style={styles.fieldLabel}>IN COLLABORATION WITH</Text>
                   <View style={styles.collaboratorsRow}>
-                    {collaborators.map((collab, index) => (
+                    {collaborators.length > 0 ? collaborators.map((collab, index) => (
                       <View key={collab.id} style={styles.collaboratorItem}>
                         <Text style={styles.fieldValue}>
                           {index > 0 ? ', ' : ''}{collab.name}
                         </Text>
                         {collab.verified && renderVerifiedBadge()}
                       </View>
-                    ))}
+                    )) : (
+                      <Text style={styles.fieldValuePlaceholder}>Add collaborators...</Text>
+                    )}
                   </View>
                 </View>
                 <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
@@ -313,16 +339,21 @@ export default function PostVideoScreen() {
             </View>
 
             <View style={styles.fieldWithHelper}>
-              <TouchableOpacity style={styles.fieldRow}>
+              <TouchableOpacity 
+                style={styles.fieldRow}
+                onPress={() => router.push(`/post-settings/select-sponsors?currentSponsors=${encodeURIComponent(JSON.stringify(sponsors))}` as Href)}
+              >
                 <View style={styles.fieldContent}>
                   <Text style={styles.fieldLabel}>SPONSORED BY</Text>
                   <View style={styles.collaboratorsRow}>
-                    {sponsors.map((sponsor) => (
+                    {sponsors.length > 0 ? sponsors.map((sponsor) => (
                       <View key={sponsor.id} style={styles.collaboratorItem}>
                         <Text style={styles.fieldValue}>{sponsor.name}</Text>
                         {sponsor.verified && renderVerifiedBadge()}
                       </View>
-                    ))}
+                    )) : (
+                      <Text style={styles.fieldValuePlaceholder}>Add sponsors...</Text>
+                    )}
                   </View>
                 </View>
                 <ChevronRight size={24} color="rgba(255, 255, 255, 0.64)" />
@@ -343,17 +374,11 @@ export default function PostVideoScreen() {
             {renderToggleRow('CAN SHARE?', canShare, setCanShare)}
 
             {renderSelectRow('AGE RATING', ageRating, () => {
-              Alert.alert('Select Age Rating', '', AGE_RATINGS.map(r => ({
-                text: r,
-                onPress: () => setAgeRating(r)
-              })));
+              router.push(`/post-settings/visibility-settings?currentVisibility=${encodeURIComponent(visibility)}&currentAgeRating=${encodeURIComponent(ageRating)}` as Href);
             })}
 
             {renderSelectRow('AVAILABLE TO', visibility, () => {
-              Alert.alert('Select Visibility', '', VISIBILITY_OPTIONS.map(v => ({
-                text: v,
-                onPress: () => setVisibility(v)
-              })));
+              router.push(`/post-settings/visibility-settings?currentVisibility=${encodeURIComponent(visibility)}&currentAgeRating=${encodeURIComponent(ageRating)}` as Href);
             })}
           </View>
 
