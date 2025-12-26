@@ -470,11 +470,19 @@ export default function ShortCard({
               }}
               activeOpacity={0.8}
             >
-              {short.category && (
-                <View style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{short.category}</Text>
-                </View>
-              )}
+              <View style={styles.chipsRow}>
+                {short.category && (
+                  <View style={styles.categoryChip}>
+                    <Text style={styles.categoryChipText}>{short.category}</Text>
+                  </View>
+                )}
+                {short.containsAI && (
+                  <View style={styles.aiChip}>
+                    <Sparkles size={10} color="rgba(255, 255, 255, 0.64)" />
+                    <Text style={styles.aiChipText}>Contains AI</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.caption} numberOfLines={captionExpanded ? undefined : 2}>
                 {short.caption}
               </Text>
@@ -483,12 +491,6 @@ export default function ShortCard({
                   <Text key={i} style={styles.tag}>#{tag}</Text>
                 ))}
               </View>
-              {short.containsAI && (
-                <View style={styles.aiChip}>
-                  <Sparkles size={10} color="rgba(255, 255, 255, 0.64)" />
-                  <Text style={styles.aiChipText}>Contains AI</Text>
-                </View>
-              )}
               {short.location && (
                 <View style={styles.locationRow}>
                   <MapPin size={12} color="rgba(255, 255, 255, 0.64)" />
@@ -995,7 +997,13 @@ const styles = StyleSheet.create({
   captionInfoLeft: {
     flex: 1,
     justifyContent: 'flex-end',
-    gap: 10,
+    gap: 8,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
   },
   categoryChip: {
     alignSelf: 'flex-start',
@@ -1035,13 +1043,13 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
   locationText: {
-    fontSize: 10,
-    fontWeight: '600' as const,
+    fontSize: 12,
+    fontWeight: '400' as const,
     color: 'rgba(255, 255, 255, 0.64)',
-    lineHeight: 12,
+    lineHeight: 18,
   },
   postedByRow: {
     flexDirection: 'row',
