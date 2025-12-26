@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, Animated, Modal, TextInput, KeyboardAvoidingView, Platform, NativeScrollEvent, NativeSyntheticEvent, TouchableWithoutFeedback, ScrollView, Alert } from "react-native";
-import { useState, useRef, useCallback } from "react";
-import { Stack, router, Href } from "expo-router";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Stack, router, Href, useLocalSearchParams } from "expo-router";
 import { Home, Eye, Link2, DollarSign, ChevronRight, ArrowUpDown, Share2, Edit3, BadgeCheck, X, Check, Camera, Lock, Users, Globe, Megaphone, Info, SlidersHorizontal, UserPlus, Star, Palette, Sun, Moon, ImageIcon, Video as VideoIcon, Volume2, VolumeX, Trophy } from "lucide-react-native";
 import { Video, ResizeMode } from 'expo-av';
 import { useApp } from "@/contexts/AppContext";
@@ -38,6 +38,17 @@ export default function ProfileScreen() {
   const { user, isDarkMode, accentColor, setAccentColor, toggleDarkMode } = useApp();
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{
+    bannerVideoUri?: string;
+    bannerStartTime?: string;
+    bannerEndTime?: string;
+    bannerMuted?: string;
+    bannerImageUri?: string;
+    bannerCropX?: string;
+    bannerCropY?: string;
+    bannerScale?: string;
+  }>();
+  
   const [selectedTab, setSelectedTab] = useState<TabType>('shorts');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -47,6 +58,19 @@ export default function ProfileScreen() {
   const [customBanner, setCustomBanner] = useState<string | null>(null);
   const [bannerType, setBannerType] = useState<'image' | 'video'>('image');
   const [isBannerMuted, setIsBannerMuted] = useState(true);
+
+  useEffect(() => {
+    if (params.bannerVideoUri) {
+      console.log('Setting video banner:', params.bannerVideoUri);
+      setCustomBanner(params.bannerVideoUri);
+      setBannerType('video');
+      setIsBannerMuted(params.bannerMuted === 'true');
+    } else if (params.bannerImageUri) {
+      console.log('Setting image banner:', params.bannerImageUri);
+      setCustomBanner(params.bannerImageUri);
+      setBannerType('image');
+    }
+  }, [params.bannerVideoUri, params.bannerImageUri, params.bannerMuted]);
   
   const userWorldRank = 42;
   const isTop99Percentile = userWorldRank <= 100;
@@ -168,10 +192,11 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets[0]) {
         console.log('Image selected:', result.assets[0].uri);
-        setCustomBanner(result.assets[0].uri);
-        setBannerType('image');
         setShowBannerPickerModal(false);
-        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.push({
+          pathname: '/banner-crop-image',
+          params: { imageUri: result.assets[0].uri }
+        } as any);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -190,10 +215,11 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets[0]) {
         console.log('Video selected:', result.assets[0].uri);
-        setCustomBanner(result.assets[0].uri);
-        setBannerType('video');
         setShowBannerPickerModal(false);
-        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.push({
+          pathname: '/banner-trim-video',
+          params: { videoUri: result.assets[0].uri }
+        } as any);
       }
     } catch (error) {
       console.error('Error picking video:', error);
