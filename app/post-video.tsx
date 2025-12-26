@@ -28,6 +28,7 @@ export default function PostVideoScreen() {
   const { user } = useApp();
   
   const [caption, setCaption] = useState('');
+  const maxCaptionLength = user?.isPro ? 2000 : 500;
   const [tags, setTags] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Technology');
   const [privacy, setPrivacy] = useState<PrivacyOption>('public');
@@ -136,9 +137,9 @@ export default function PostVideoScreen() {
             value={caption}
             onChangeText={setCaption}
             multiline
-            maxLength={500}
+            maxLength={maxCaptionLength}
           />
-          <Text style={styles.charCount}>{caption.length}/500</Text>
+          <Text style={styles.charCount}>{caption.length}/{maxCaptionLength}</Text>
         </View>
 
         <View style={styles.section}>

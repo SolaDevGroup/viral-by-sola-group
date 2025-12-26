@@ -14,7 +14,8 @@ import {
   Users2, 
   HelpCircle, 
   LogOut,
-  ChevronRight 
+  ChevronRight,
+  Crown
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/contexts/AppContext";
@@ -85,6 +86,11 @@ export default function SettingsScreen() {
       >
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.sectionCard}>
+          <SettingsItem
+            icon={<Crown size={20} color="#FFD700" strokeWidth={1.5} />}
+            label="Pro Subscription"
+            onPress={() => router.push('/settings/pro-subscription')}
+          />
           <SettingsItem
             icon={<User size={20} color="rgba(255,255,255,0.64)" strokeWidth={1.5} />}
             label="Account Info"

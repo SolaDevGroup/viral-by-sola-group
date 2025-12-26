@@ -6,6 +6,7 @@ export interface User {
   bio: string;
   isVerified: boolean;
   isMinor: boolean;
+  isPro: boolean;
   followers: number;
   following: number;
   totalViews: number;
@@ -64,6 +65,11 @@ export interface Short {
     user: User;
     othersCount: number;
   };
+  link?: string;
+  collaborators?: User[];
+  is4K?: boolean;
+  isPinned?: boolean;
+  isPermanent?: boolean;
 }
 
 export interface Story {
