@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/contexts/AppContext";
 import { ContentProvider } from "@/contexts/ContentContext";
@@ -18,61 +17,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient();
 
-function LoadingScreen() {
-  return (
-    <View style={loadingStyles.container}>
-      <View style={loadingStyles.logoPill}>
-        <Text style={loadingStyles.logoText}>V</Text>
-      </View>
-      <ActivityIndicator size="large" color="#37B874" style={loadingStyles.spinner} />
-      <View style={loadingStyles.footer}>
-        <Text style={loadingStyles.fromText}>from</Text>
-        <Text style={loadingStyles.brandText}>Sola Group</Text>
-      </View>
-    </View>
-  );
-}
-
-const loadingStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoPill: {
-    width: 80,
-    height: 130,
-    borderRadius: 40,
-    backgroundColor: '#37B874',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  spinner: {
-    marginTop: 30,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 100,
-    alignItems: 'center',
-  },
-  fromText: {
-    fontSize: 14,
-    color: 'rgba(18, 18, 18, 0.48)',
-  },
-  brandText: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: '#37B874',
-    marginTop: 4,
-  },
-});
-
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -83,12 +27,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return <LoadingScreen />;
+    return null;
   }
 
   return (

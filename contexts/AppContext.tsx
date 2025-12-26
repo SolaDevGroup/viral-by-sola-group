@@ -43,7 +43,9 @@ export const [AppProvider, useApp] = createContextHook<AppState>(() => {
       }
     };
     
-    initializeApp();
+    initializeApp().catch(err => {
+      console.error('App initialization failed:', err);
+    });
   }, []);
 
   const loadUserData = async () => {
