@@ -4,10 +4,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
 export default function Index() {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/(tabs)/discover');
-    }, 100);
-    return () => clearTimeout(timer);
+    router.replace('/(tabs)/home');
   }, []);
 
   return (
