@@ -44,6 +44,9 @@ export default function RootLayout() {
               <Stack.Screen name="settings/security" />
               <Stack.Screen name="settings/notifications-settings" />
               <Stack.Screen name="settings/view-settings" />
+              <Stack.Screen name="settings/pro-subscription" />
+              <Stack.Screen name="banner-trim-video" />
+              <Stack.Screen name="banner-crop-image" />
             </Stack>
           </ContentProvider>
         </AppProvider>
