@@ -13,17 +13,35 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-     "assetBundlePatterns": [
+    "assetBundlePatterns": [
       "assets/fonts/*"
     ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.solagroup.viral",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio",
+          "location"
+        ],
         "NSMicrophoneUsageDescription": "Allow Viral to access your microphone",
         "NSCameraUsageDescription": "Allow Viral to access your camera",
-        "NSPhotoLibraryUsageDescription": "Allow Viral to access your photos"
+        "NSPhotoLibraryUsageDescription": "Allow Viral to access your photos",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
+        "NSLocationAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location."
+      },
+      "requireFullScreen": true,
+      "entitlements": {
+        "com": {
+          "apple": {
+            "developer": {
+              "networking": {
+                "wifi-info": true
+              }
+            }
+          }
+        }
       }
     },
     "android": {
@@ -37,7 +55,12 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
@@ -53,6 +76,9 @@
       [
         "expo-location",
         {
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
           "locationAlwaysAndWhenInUsePermission": "Allow Viral to use your location."
         }
       ],
@@ -78,7 +104,13 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-      "react-native-vision-camera"
+      "react-native-vision-camera",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "DEFAULT"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

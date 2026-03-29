@@ -8,23 +8,24 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { Image } from "expo-image";
+import { useSelector } from "react-redux";
 import { Images } from "@/assets/images";
 import Blur from "@/components/Blur";
 import CustomButton from "@/components/CustomButton";
 import CustomText from "@/components/CustomText";
-// import Video from "react-native-video";
-const Video = (props) => (
-  <View {...props} style={[props.style, { backgroundColor: "black" }]} />
-);
 import { post } from "@/services/ApiRequest";
 import ExpoIcons from "@/components/ExpoIcons";
 import Colors from "@/constants/colors";
-import { Image } from "expo-image";
 import { useApp } from "@/contexts/AppContext";
-import { useSelector } from "react-redux";
+
+const Video = (props: any) => (
+  <View {...props} style={[props.style, { backgroundColor: "black" }]} />
+);
 const { width, height } = Dimensions.get("window");
 
 // Mapping between emoji display and API reaction values
@@ -43,10 +44,15 @@ const EMOJI_MAPPING: any = {
 
 const EMOJIS = ["😀", "😂", "😍", "🥲", "😎", "🤯", "😭", "🔥", "❤️", "👍"];
 
+const ROTATION_ANGLE = Platform.OS === "android" ? 80 : 90;
+const SCALE_FACTOR = 0.98;
+
 const FloatingReaction = ({ emoji, startX, onComplete }: any) => {
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(startX)).current;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const duration = 2000 + Math.random() * 1000;
@@ -78,7 +84,8 @@ const FloatingReaction = ({ emoji, startX, onComplete }: any) => {
           }),
         ])
       ),
-    ]).start(() => onComplete && onComplete());
+    ]).start(() => onCompleteRef.current?.());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -108,12 +115,14 @@ const StoryViewer = () => {
     isMyStories,
   } = route?.params || {};
 
-  const { isDarkMode, accentColor } = useApp();
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const { isDarkMode } = useApp();
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const flatStories = useMemo(() => {
     let flattened: any = [];
-    userStories?.forEach((user: any, uIdx: any) => {
-      user.stories.forEach((story: any, sIdx: any) => {
+    userStories?.forEach((user: any, uIdx: number) => {
+      user.stories.forEach((story: any, sIdx: number) => {
         flattened.push({
           ...story,
           userIndex: uIdx,
@@ -127,7 +136,7 @@ const StoryViewer = () => {
   }, [userStories]);
 
   const initialGlobalIndex = useMemo(() => {
-    return flatStories.findIndex((s) => s.userIndex === initialUserIndex) || 0;
+    return flatStories.findIndex((s: any) => s.userIndex === initialUserIndex) || 0;
   }, [flatStories, initialUserIndex]);
 
   const [currentIndex, setCurrentIndex] = useState(initialGlobalIndex);
@@ -155,17 +164,17 @@ const StoryViewer = () => {
   // Initialize reaction counts when current item changes
   useEffect(() => {
     if (currentItem?.stats?.reactions) {
-      const newCounts = { ...reactionCounts };
-
-      Object.entries(EMOJI_MAPPING).forEach(([emoji, reactionKey]) => {
-        const count: any = currentItem.stats.reactions[reactionKey] || 0;
-        newCounts[emoji] = {
-          ...newCounts[emoji],
-          count,
-        };
+      setReactionCounts((prev: any) => {
+        const newCounts = { ...prev };
+        Object.entries(EMOJI_MAPPING).forEach(([emojiKey, reactionKey]) => {
+          const count: any = currentItem.stats.reactions[reactionKey as string] || 0;
+          newCounts[emojiKey] = {
+            ...newCounts[emojiKey],
+            count,
+          };
+        });
+        return newCounts;
       });
-
-      setReactionCounts(newCounts);
     }
   }, [currentItem]);
 
@@ -178,7 +187,7 @@ const StoryViewer = () => {
       try {
         if (currentItem._id) {
           const url = `stories/${currentItem?._id}/view`;
-          const response = await post(url);
+          await post(url);
         }
       } catch (error) {
         console.log("Error tracking story view:", error);
@@ -206,6 +215,7 @@ const StoryViewer = () => {
         animationRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, currentItem]);
 
   // Separate useEffect to handle pause/resume
@@ -224,6 +234,7 @@ const StoryViewer = () => {
       // Resume from paused position
       startProgressAnimation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaused]);
 
   const startProgressAnimation = () => {
@@ -295,9 +306,8 @@ const StoryViewer = () => {
       if (!reactionType || !currentItem?._id) return;
 
       try {
-        // Make API call to post reaction
         const url = `stories/${currentItem._id}/reactions`;
-        const response = await post(url, { reaction: reactionType });
+        await post(url, { reaction: reactionType });
 
         // Update local state with +1 count
         setReactionCounts((prev: any) => ({
@@ -343,8 +353,53 @@ const StoryViewer = () => {
   );
 
   const removeEmoji = useCallback((id?: any) => {
-    setFloatingEmojis((prev) => prev.filter((e) => e?.id !== id));
+    setFloatingEmojis((prev) => prev.filter((e: any) => e?.id !== id));
   }, []);
+
+  const getItemStyle = (index: number) => {
+    const inputRange = [
+      (index - 1) * width,
+      index * width,
+      (index + 1) * width,
+    ];
+
+    const scaleY = scrollX.interpolate({
+      inputRange,
+      outputRange: [SCALE_FACTOR, 1, SCALE_FACTOR],
+      extrapolate: 'clamp',
+    });
+
+    const translateX = Platform.OS === 'android'
+      ? scrollX.interpolate({
+          inputRange,
+          outputRange: [-8, 0, 8],
+          extrapolate: 'clamp',
+        })
+      : 0;
+
+    const rotateY = scrollX.interpolate({
+      inputRange,
+      outputRange: [`${ROTATION_ANGLE}deg`, '0deg', `-${ROTATION_ANGLE}deg`],
+      extrapolate: 'clamp',
+    });
+
+    const opacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.7, 1, 0.7],
+      extrapolate: 'clamp',
+    });
+
+    return {
+      transform: [
+        { perspective: width * 4 },
+        { translateX },
+        { scaleY },
+        { rotateY },
+      ],
+      opacity,
+      backfaceVisibility: 'hidden' as const,
+    };
+  };
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: any }) => {
@@ -394,52 +449,53 @@ const StoryViewer = () => {
   }, [currentItem, progressAnim]);
 
   const renderStoryItem = useCallback(
-    ({ item }: { item: any }) => {
+    ({ item, index }: { item: any; index: number }) => {
       const isCurrentItem = flatStories[currentIndex] === item;
+      const animatedStyle = getItemStyle(index);
 
       return (
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[
-            styles.storyItemContainer,
-            {
-              width: width,
-              height: height,
-            },
-          ]}
-          onPress={handlePress}
-          onLongPress={() => setIsPaused(true)}
-          onPressOut={() => setIsPaused(false)}
-          delayLongPress={200}
-        >
-          {item?.media?.type === "video" ? (
-            <Video
-              ref={isCurrentItem ? videoRef : null}
-              source={{ uri: item.media.url }}
-              style={styles.storyImage}
-              // resizeMode="contain"
-              paused={isPaused || !isCurrentItem}
-              repeat={false}
-              playInBackground={false}
-              playWhenInactive={false}
-              onLoad={(data: any) => {
-                // Update duration if different from expected
-                if (isCurrentItem && data.duration) {
-                  item.media.duration = data.duration;
-                }
-              }}
-            />
-          ) : (
-            <Image
-              source={{ uri: item?.media?.url }}
-              style={styles.storyImage}
-              // resizeMode="contain"
-            />
-          )}
-        </TouchableOpacity>
+        <Animated.View style={[{ width, height }, animatedStyle]}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.storyItemContainer,
+              {
+                width: width,
+                height: height,
+              },
+            ]}
+            onPress={handlePress}
+            onLongPress={() => setIsPaused(true)}
+            onPressOut={() => setIsPaused(false)}
+            delayLongPress={200}
+          >
+            {item?.media?.type === "video" ? (
+              <Video
+                ref={isCurrentItem ? videoRef : null}
+                source={{ uri: item.media.url }}
+                style={styles.storyImage}
+                paused={isPaused || !isCurrentItem}
+                repeat={false}
+                playInBackground={false}
+                playWhenInactive={false}
+                onLoad={(data: any) => {
+                  if (isCurrentItem && data.duration) {
+                    item.media.duration = data.duration;
+                  }
+                }}
+              />
+            ) : (
+              <Image
+                source={{ uri: item?.media?.url }}
+                style={styles.storyImage}
+              />
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       );
     },
-    [currentIndex, flatStories, handlePress, isPaused]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentIndex, flatStories, handlePress, isPaused, scrollX]
   );
   const actualUser = useSelector((state: any) => state?.users?.userData);
   if (!currentItem) return null;
@@ -450,11 +506,11 @@ const StoryViewer = () => {
     <View style={{ backgroundColor: Colors.black }}>
       <StatusBar barStyle="light-content" />
 
-      <FlatList
+      <Animated.FlatList
         ref={flatListRef}
         data={flatStories}
         renderItem={renderStoryItem}
-        keyExtractor={(item, index) => `story-${index}`}
+        keyExtractor={(item: any, index: number) => `story-${index}`}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -462,7 +518,7 @@ const StoryViewer = () => {
         viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
         scrollEnabled={!isPaused}
         initialScrollIndex={initialGlobalIndex}
-        getItemLayout={(data, index) => ({
+        getItemLayout={(data: any, index: number) => ({
           length: width,
           offset: width * index,
           index,
@@ -470,6 +526,11 @@ const StoryViewer = () => {
         windowSize={3}
         maxToRenderPerBatch={3}
         removeClippedSubviews={true}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
       />
 
       {floatingEmojis.map((item: any) => (
@@ -494,7 +555,7 @@ const StoryViewer = () => {
                   key={idx}
                   style={styles.emojiButtonContainer}
                   activeOpacity={0.7}
-                  onPress={() => handleEmojiPress(emoji, idx)}
+                  onPress={() => handleEmojiPress(emoji)}
                 >
                   <View style={styles.emojiButton}>
                     <Blur blurAmount={10} style={StyleSheet.absoluteFill} />
